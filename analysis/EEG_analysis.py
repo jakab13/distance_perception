@@ -29,7 +29,7 @@ button_times = events[np.where(events[:, 2] == 7)][:, 0]
 hits = 0
 misses = 0
 for sweep_time in sweep_times:
-    interval = sweep_time + 3 * sr # 3 sec interval after button press
+    interval = sweep_time + 3 * sr # 3 sec interval after sweep was played press
     if np.where(np.logical_and(button_times >= sweep_time, button_times <= interval)) is not None:
         hits = +1
     else:
