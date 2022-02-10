@@ -36,6 +36,6 @@ for sweep_time in sweep_times:
     interval = sweep_time + ISI  # ISI (2 sec interval after button press)
     button_in_interval = np.where(np.logical_and(button_times >= sweep_time, button_times <= interval))
     if button_in_interval is not None:
-        hits.append(events[0])
+        hits.append(sweep_time)
     else:
-        misses = +1
+        misses.append(sweep_time)
