@@ -19,6 +19,7 @@ for idx, header_file in enumerate(header_files):
     raw_files.append(mne.io.read_raw_brainvision(header_file))
 
 raw = mne.concatenate_raws(raw_files, verbose=True)
+events = mne.events_from_annotations(raw)
 
 # get hit rate for button presses
 # for every sweep onset, check if there was a button pressed within
