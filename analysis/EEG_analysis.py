@@ -10,7 +10,7 @@ plt.style.use(['seaborn-colorblind', 'seaborn-darkgrid'])
 DIR = pathlib.Path(os.getcwd())
 
 folder_name = '2022_02_04_pinknoise_jakab'
-folder_path = DIR / 'data' / folder_name
+folder_path = DIR / 'analysis' / 'data' / folder_name
 
 header_files = folder_path.glob('*.vhdr')
 raw_files = []
