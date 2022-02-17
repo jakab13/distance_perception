@@ -19,3 +19,6 @@ for idx, header_file in enumerate(header_files):
     raw_files.append(mne.io.read_raw_brainvision(header_file))
 
 raw = mne.concatenate_raws(raw_files, verbose=True)
+
+# Start visualisations
+
