@@ -13,11 +13,11 @@ adjust = 12
 
 DIR = pathlib.Path(os.getcwd())
 
-file_category = 'whisper'
+file_category = 'pinknoise_2'
 
-simulated_filepath = DIR / 'samples' / file_category / 'simulated'
-aligned_filepath = DIR / 'samples' / file_category / 'aligned'
-a_weighted_filepath = DIR / 'samples' / file_category / 'a_weighted'
+simulated_filepath = DIR / 'experiment' / 'samples' / file_category / 'simulated'
+aligned_filepath = DIR / 'experiment' / 'samples' / file_category / 'aligned'
+a_weighted_filepath = DIR / 'experiment' / 'samples' / file_category / 'a_weighted'
 
 simulated_sound_filenames = [f for f in listdir(simulated_filepath) if isfile(join(simulated_filepath, f))]
 aligned_sound_filenames = [f for f in listdir(aligned_filepath) if isfile(join(aligned_filepath, f))]
@@ -106,6 +106,6 @@ def play_a_weighted_sounds(n_reps):
         stim.play()
 
 # write_pinknoises()
-# write_aligned_files(simulated_filepath, simulated_sound_filenames)
+write_aligned_files(simulated_filepath, simulated_sound_filenames)
 # write_equalised_files(aligned_filepath)
-play_a_weighted_sounds(10)
+# play_a_weighted_sounds(10)
