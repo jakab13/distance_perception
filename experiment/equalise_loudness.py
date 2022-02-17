@@ -8,13 +8,15 @@ from scipy import signal
 from os import listdir
 from os.path import isfile, join
 
-slab.set_default_samplerate(44100)
+slab.Signal.set_default_samplerate(44100)
 adjust = 12
 
 DIR = pathlib.Path(os.getcwd())
 
-file_category = 'pinknoise_2'
+filename_core = 'pinknoise'
+room = 'room-5-30-3'
 
+file_category = filename_core + '_' + room
 simulated_filepath = DIR / 'experiment' / 'samples' / file_category / 'simulated'
 aligned_filepath = DIR / 'experiment' / 'samples' / file_category / 'aligned'
 a_weighted_filepath = DIR / 'experiment' / 'samples' / file_category / 'a_weighted'
@@ -89,13 +91,13 @@ def write_equalised_files(aligned_filepath):
         target.write(a_weighted_filepath / aligned_target_filename, normalise=False)
 
 def play_a_weighted_sounds(n_reps):
-    seq = slab.Trialsequence(a_weighted_sound_filenames, kind="random_permutation", n_reps=n_reps)
+    seq = slab.Trialsequence(a_weighted_sound_filenames, kind="random_permutation", n_reps=10)
     for filename in seq:
         isi = numpy.random.uniform(1.0, 1.0)
         stim = slab.Binaural(a_weighted_filepath / filename)
         isi = slab.Sound.in_samples(isi, stim.samplerate)
-        if stim.n_samples < isi:
-            silence_length = isi - stim.n_samples
+        if stim.nsamples < isi:
+            silence_length = isi - stim.nsamples
             silence = slab.Binaural.silence(duration=silence_length, samplerate=stim.samplerate)
             stim = slab.Binaural.sequence(stim, silence)
             stim = stim.ramp(duration=0.01)
@@ -106,6 +108,6 @@ def play_a_weighted_sounds(n_reps):
         stim.play()
 
 # write_pinknoises()
-write_aligned_files(simulated_filepath, simulated_sound_filenames)
+# write_aligned_files(simulated_filepath, simulated_sound_filenames)
 # write_equalised_files(aligned_filepath)
-# play_a_weighted_sounds(10)
+play_a_weighted_sounds(10)
