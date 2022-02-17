@@ -13,11 +13,13 @@ adjust = 12
 
 DIR = pathlib.Path(os.getcwd())
 
-file_category = 'whisper'
+filename_core = 'pinknoise'
+room = 'room-5-30-3'
 
-simulated_filepath = DIR / 'samples' / file_category / 'simulated'
-aligned_filepath = DIR / 'samples' / file_category / 'aligned'
-a_weighted_filepath = DIR / 'samples' / file_category / 'a_weighted'
+file_category = filename_core + '_' + room
+simulated_filepath = DIR / 'experiment' / 'samples' / file_category / 'simulated'
+aligned_filepath = DIR / 'experiment' / 'samples' / file_category / 'aligned'
+a_weighted_filepath = DIR / 'experiment' / 'samples' / file_category / 'a_weighted'
 
 simulated_sound_filenames = [f for f in listdir(simulated_filepath) if isfile(join(simulated_filepath, f))]
 aligned_sound_filenames = [f for f in listdir(aligned_filepath) if isfile(join(aligned_filepath, f))]
@@ -89,7 +91,7 @@ def write_equalised_files(aligned_filepath):
         target.write(a_weighted_filepath / aligned_target_filename, normalise=False)
 
 def play_a_weighted_sounds(n_reps):
-    seq = slab.Trialsequence(a_weighted_sound_filenames, kind="random_permutation", n_reps=n_reps)
+    seq = slab.Trialsequence(a_weighted_sound_filenames, kind="random_permutation", n_reps=10)
     for filename in seq:
         isi = numpy.random.uniform(1.0, 1.0)
         stim = slab.Binaural(a_weighted_filepath / filename)
