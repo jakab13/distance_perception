@@ -8,7 +8,7 @@ from scipy import signal
 from os import listdir
 from os.path import isfile, join
 
-slab.set_default_samplerate(44100)
+slab.Signal.set_default_samplerate(44100)
 adjust = 12
 
 DIR = pathlib.Path(os.getcwd())
@@ -40,8 +40,8 @@ def align_onset(filename):
     peaks_left = scipy.signal.find_peaks(sound.data[:, 0], height=0.001)
     peaks_right = scipy.signal.find_peaks(sound.data[:, 1], height=0.001)
     onset_idx = min(peaks_left[0][0], peaks_right[0][0])
-    for chan_num in range(sound.n_channels):
-        length = sound.n_samples
+    for chan_num in range(sound.nchannels):
+        length = sound.nsamples
         sound.data[:length - onset_idx, chan_num] = sound.data[onset_idx:, chan_num]
     return sound
 
@@ -94,8 +94,8 @@ def play_a_weighted_sounds(n_reps):
         isi = numpy.random.uniform(1.0, 1.0)
         stim = slab.Binaural(a_weighted_filepath / filename)
         isi = slab.Sound.in_samples(isi, stim.samplerate)
-        if stim.n_samples < isi:
-            silence_length = isi - stim.n_samples
+        if stim.nsamples < isi:
+            silence_length = isi - stim.nsamples
             silence = slab.Binaural.silence(duration=silence_length, samplerate=stim.samplerate)
             stim = slab.Binaural.sequence(stim, silence)
             stim = stim.ramp(duration=0.01)
