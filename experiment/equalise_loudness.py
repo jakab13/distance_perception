@@ -13,33 +13,33 @@ slab.Signal.set_default_samplerate(44100)
 DIR = pathlib.Path(os.getcwd())
 
 setup_table = {
-    # "bark": {
-    #     "window": 0.4,
-    #     "adjust": 8
-    # },
-    # "bum": {
-    #     "window": 0.19,
-    #     "adjust": 8
-    # },
-    # "chirp": {
-    #     "window": 0.25,
-    #     "adjust": 5
-    # },
-    # "glass": {
-    #     "window": 0.15,
-    #     "adjust": 15
-    # },
+    "bark": {
+        "window": 0.4,
+        "adjust": 8
+    },
+    "bum": {
+        "window": 0.19,
+        "adjust": 8
+    },
+    "chirp": {
+        "window": 0.25,
+        "adjust": 10
+    },
+    "glass": {
+        "window": 0.15,
+        "adjust": 18
+    },
     "lock": {
         "window": 0.15,
         "adjust": 15
     },
     "pinknoise": {
         "window": 0.25,
-        "adjust": 10
+        "adjust": 13
     },
     "plug": {
         "window": 0.1,
-        "adjust": 10
+        "adjust": 12
     },
     "sneeze": {
         "window": 0.4,
@@ -47,7 +47,7 @@ setup_table = {
     },
     "waterdrop": {
         "window": 0.15,
-        "adjust": 15
+        "adjust": 18
     },
     "whisper": {
         "window": 0.4,
@@ -59,7 +59,7 @@ setup_table = {
     }
 }
 
-room_dimensions = '20-30-5'
+room_dimensions = '30-30-10'
 
 for filename_core in setup_table:
     adjust = setup_table[filename_core]["adjust"]
