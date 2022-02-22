@@ -4,48 +4,24 @@ import slab
 import pathlib
 import os
 import time
+from experiment.config import get_config
+from experiment.load import load_sounds
 
 # ===========================================================
 
 n_reps = 50
 isi = 1.5
-filename = 'pinknoise_0'
-# filename = 'clicktrain'
-# filename = 'whisper'
-# filename = 'bark'
+sound_type = 'pinknoise'
+# sound_type = 'whisper'
+# sound_type = 'bark'
 
 # ============================================================
 
+config = get_config()
 DIR = pathlib.Path(os.getcwd())  # path for sound and rcx files
 default_samplerate = 48828
-slab.Signal.set_default_samplerate(default_samplerate)
+slab.set_default_samplerate(default_samplerate)
 playbuflen = int(min(isi, 4) * 44100)
-
-proc_list = [['RP2', 'RP2',  DIR / 'experiment' / 'data' / 'bi_play_buf.rcx'],
-             ['RX81', 'RX8',  DIR / 'experiment' / 'data' / 'play_buf.rcx'],
-             ['RX82', 'RX8', DIR / 'experiment' / 'data' / 'play_buf.rcx']]
-
-file_path = DIR / 'experiment' / 'samples' / filename / 'a_weighted'
-
-control_filename = 'AW_A_' + filename + '_control.wav'
-dist_1_filename = 'AW_A_' + filename + '_1m.wav'
-dist_2_filename = 'AW_A_' + filename + '_2m.wav'
-dist_4_filename = 'AW_A_' + filename + '_4m.wav'
-dist_8_filename = 'AW_A_' + filename + '_8m.wav'
-dist_16_filename = 'AW_A_' + filename + '_16m.wav'
-deviant_filename = 'manual_adj_chirp_16.wav'
-
-deviant_filepath = DIR / 'experiment' / 'samples' / deviant_filename
-control_filepath = file_path / control_filename
-
-sound_filenames = [
-    control_filename,
-    # dist_1_filename,
-    dist_2_filename,
-    dist_4_filename,
-    dist_8_filename,
-    dist_16_filename
-]
 
 def button_trig(trig_value):
     prev_response = 0
@@ -59,8 +35,11 @@ def button_trig(trig_value):
         time.sleep(0.01)
         prev_response = curr_response
 
-freefield.initialize('dome', zbus=True, device=proc_list)
+freefield.initialize('dome', zbus=True, device=config['proc_list'])
 freefield.set_logger('WARNING')
+
+loaded_sound = load_sounds()
+distances = [0.2, 2, 8, 18]
 
 stimuli = [slab.Binaural(file_path / sound_filename) for sound_filename in sound_filenames]
 deviant_sound = slab.Binaural(deviant_filepath)
