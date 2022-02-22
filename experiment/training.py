@@ -14,7 +14,6 @@ import config
 import load
 
 slab.set_default_samplerate(44100)
-
 config = config.get_config()
 proc_list = config['proc_list']
 freefield.initialize('dome', zbus=True, device=proc_list)
@@ -22,31 +21,36 @@ freefield.set_logger('WARNING')
 
 
 class Training:
-    def __init__(self, sound_type="pinknoise", room_dimensions='10-30-3', playback_direction='random'):
-        self.playback_direction = playback_direction
+    def __init__(self, sound_type="pinknoise", room_dimensions='10-30-3'):
         self.sound_type = sound_type
         self.room_dimensions = room_dimensions
         self.sounds = load.load_sounds(self.sound_type, self.room_dimensions)
+        self.playback_direction = "random"
         self.record_response = True
         self.jitter_distances = False
         self.trials = None
         self.correct_total = 0
         self.deviant_freq = None
 
-    def get_distances(self):
-        distances = [0.2, 0.4, 0.6, 0.8, 1, 1.6, 2.2, 3.0, 4, 5, 7, 10, 13, 16, 18]
-        if self.playback_direction == 'away':
+    def get_distances(self, playback_direction):
+        if playback_direction == 'away':
+            distances = config['distances']['detailed']
             distances.sort()
-            self.trials = numpy.asarray([i + 1 for i in range(len(distances))])
+            self.trials = distances
             self.deviant_freq = None
-        elif self.playback_direction == 'toward':
+            self.jitter_distances = False
+        elif playback_direction == 'toward':
+            distances = config['distances']['detailed']
             distances.sort(reverse=True)
-            self.trials = numpy.asarray([i + 1 for i in range(len(distances))])
+            self.trials = distances
             self.deviant_freq = None
-        else:
-            distances = [0.2, 2, 8, 18]
+            self.jitter_distances = False
+        elif playback_direction == 'random':
+            distances = config['distances']['sparse']
             self.jitter_distances = True
             self.deviant_freq = 0.05
+            self.record_response = True
+            self.trials = None
         return distances
 
     @staticmethod
@@ -57,17 +61,17 @@ class Training:
 
     def crop_sound(self, sound, isi):
         isi = slab.Sound.in_samples(isi, sound.samplerate)
-        # sound = copy.deepcopy(sound)
+        out = copy.deepcopy(sound)
         if sound.n_samples < isi:
             silence_length = isi - sound.n_samples
             silence = slab.Sound.silence(duration=silence_length, samplerate=sound.samplerate)
             left = slab.Sound.sequence(sound.left, silence)
             right = slab.Sound.sequence(sound.right, silence)
-            sound = slab.Binaural([left, right])
+            out = slab.Binaural([left, right])
         else:
-            sound.data = sound.data[: isi]
-            sound = sound.ramp(duration=0.01)
-        return sound
+            out.data = sound.data[: isi]
+        out = out.ramp(duration=0.01)
+        return out
 
     def load_sound(self, sound, isi):
         isi = slab.Sound.in_samples(isi, sound.samplerate)
@@ -77,17 +81,13 @@ class Training:
         freefield.write(tag="data_r", value=sound.right.data.flatten(), processors="RP2")
 
     def collect_responses(self, seq):
-        response = None
-        prev_response = 0
-        while freefield.read(tag="playback", n_samples=1, processor="RP2"):
-            curr_response = freefield.read(tag="response", processor="RP2")
-            curr_response = int(curr_response)
-            if curr_response > prev_response and curr_response != 0:
-                response = int(numpy.log2(curr_response)) + 1
-                if response == 5:
-                    response = 0
+        while not freefield.read(tag="response", processor="RP2"):
             time.sleep(0.01)
-            prev_response = curr_response
+        curr_response = int(freefield.read(tag="response", processor="RP2"))
+        if curr_response != 0:
+            response = int(numpy.log2(curr_response)) + 1
+        if response == 5:
+            response = 0
         is_correct = True if response == seq.trials[seq.this_n] else False
         if is_correct:
             self.correct_total += 1
@@ -95,11 +95,14 @@ class Training:
                           'response': response,
                           'isCorrect': is_correct,
                           'correct_total': self.correct_total})
-        print('[Response ' + str(response) + ']', '(' + str(self.correct_total) + ')')
+        print('[Response ' + str(response) + ']',
+              '(Correct ' + str(self.correct_total) + '/' + str(seq.this_n + 1) + ')')
+        while freefield.read(tag="playback", n_samples=1, processor="RP2"):
+            time.sleep(0.01)
 
-    def run(self, playback_direction='away', record_response=False, n_reps=1, isi=1.5):
-        self.playback_direction = playback_direction
-        distances = self.get_distances()
+    def run(self, playback_direction='random', record_response=False, n_reps=1, isi=1.5, level_adjust=0):
+        self.record_response = record_response
+        distances = self.get_distances(playback_direction)
         seq = slab.Trialsequence(conditions=distances, trials=self.trials, n_reps=n_reps,
                                  deviant_freq=self.deviant_freq)
         for distance in seq:
@@ -111,14 +114,16 @@ class Training:
                     distance = self.jitter_distance(distance)
                 stimulus = self.sounds[self.sound_type][self.room_dimensions][str(distance)]
             stimulus = self.crop_sound(stimulus, isi)
-            print('[Distance ' + str(seq.trials[seq.this_n]) + ']',
-                  self.sound_type, 'in room', self.room_dimensions,
+            stimulus.level += level_adjust
+            print('Playing', self.sound_type, 'in room', self.room_dimensions,
                   'at', str(distance / 100) + 'm')
-            # stimulus.play()
             self.load_sound(stimulus, isi)
             freefield.play()
-            self.collect_responses(seq)
-            if record_response:
+            if not self.record_response:
+                freefield.wait_to_finish_playing(proc="RP2", tag="playback")
+            # stimulus.play()
+            if self.record_response:
+                self.collect_responses(seq)
                 seq.save_json("responses.json", clobber=True)
 
     def play_control(self):
