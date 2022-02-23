@@ -33,6 +33,7 @@ class Training:
         self.deviant_freq = None
 
     def get_distances(self, playback_direction):
+        distances = []
         if playback_direction == 'away':
             distances = config['distances']['detailed']
             distances.sort()
@@ -73,9 +74,10 @@ class Training:
         out = out.ramp(duration=0.01)
         return out
 
-    def load_sound(self, sound, isi):
+    def load_sound(self, sound, isi=2.0):
         isi = slab.Sound.in_samples(isi, sound.samplerate)
         isi = max(sound.n_samples, isi)
+
         freefield.write(tag="playbuflen", value=isi, processors="RP2")
         freefield.write(tag="data_l", value=sound.left.data.flatten(), processors="RP2")
         freefield.write(tag="data_r", value=sound.right.data.flatten(), processors="RP2")
@@ -128,6 +130,12 @@ class Training:
 
     def play_control(self):
         control_sound = load.load_control(self.sound_type, self.room_dimensions)
+        self.load_sound(control_sound)
+        freefield.play()
+        # control_sound.play()
+
+    def play_deviant(self):
+        control_sound = load.load_deviant()
         self.load_sound(control_sound)
         freefield.play()
         # control_sound.play()
