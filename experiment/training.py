@@ -86,8 +86,8 @@ class Training:
         curr_response = int(freefield.read(tag="response", processor="RP2"))
         if curr_response != 0:
             response = int(numpy.log2(curr_response)) + 1
-        if response == 5:
-            response = 0
+            if response == 5:
+                response = 0
         is_correct = True if response == seq.trials[seq.this_n] else False
         if is_correct:
             self.correct_total += 1
