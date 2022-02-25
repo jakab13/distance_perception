@@ -1,13 +1,7 @@
 import slab
 import freefield
-import pathlib
-import os
 import copy
 import numpy
-import scipy
-from scipy import signal
-from os import listdir
-from os.path import isfile, join
 import time
 import random
 import config
@@ -21,7 +15,7 @@ freefield.set_logger('WARNING')
 
 
 class Training:
-    def __init__(self, sound_type="pinknoise", room_dimensions='10-30-3'):
+    def __init__(self, participant_id, sound_type="pinknoise", room_dimensions='10-30-3'):
         self.sound_type = sound_type
         self.room_dimensions = room_dimensions
         self.sounds = load.load_sounds(self.sound_type, self.room_dimensions)
@@ -31,17 +25,16 @@ class Training:
         self.trials = None
         self.correct_total = 0
         self.deviant_freq = None
+        self.participant_id = participant_id
 
     def get_distances(self, playback_direction):
-        distances = []
+        distances = config['distances']['detailed']
         if playback_direction == 'away':
-            distances = config['distances']['detailed']
             distances.sort()
             self.trials = distances
             self.deviant_freq = None
             self.jitter_distances = False
         elif playback_direction == 'toward':
-            distances = config['distances']['detailed']
             distances.sort(reverse=True)
             self.trials = distances
             self.deviant_freq = None
@@ -49,7 +42,7 @@ class Training:
         elif playback_direction == 'random':
             distances = config['distances']['sparse']
             self.jitter_distances = True
-            self.deviant_freq = 0.05
+            self.deviant_freq = None
             self.record_response = True
             self.trials = None
         return distances
@@ -75,14 +68,15 @@ class Training:
         return out
 
     def load_sound(self, sound, isi=2.0):
-        isi = slab.Sound.in_samples(isi, sound.samplerate)
-        isi = max(sound.n_samples, isi)
-
+        out = self.crop_sound(sound, isi)
+        isi = slab.Sound.in_samples(isi, out.samplerate)
+        isi = max(out.n_samples, isi)
         freefield.write(tag="playbuflen", value=isi, processors="RP2")
-        freefield.write(tag="data_l", value=sound.left.data.flatten(), processors="RP2")
-        freefield.write(tag="data_r", value=sound.right.data.flatten(), processors="RP2")
+        freefield.write(tag="data_l", value=out.left.data.flatten(), processors="RP2")
+        freefield.write(tag="data_r", value=out.right.data.flatten(), processors="RP2")
 
     def collect_responses(self, seq):
+        response = None
         while not freefield.read(tag="response", processor="RP2"):
             time.sleep(0.01)
         curr_response = int(freefield.read(tag="response", processor="RP2"))
@@ -90,7 +84,7 @@ class Training:
             response = int(numpy.log2(curr_response)) + 1
             if response == 5:
                 response = 0
-        is_correct = True if response == seq.trials[seq.this_n] else False
+        is_correct = response == seq.trials[seq.this_n]
         if is_correct:
             self.correct_total += 1
         seq.add_response({'solution': seq.trials[seq.this_n],
@@ -115,7 +109,6 @@ class Training:
                 if self.jitter_distances:
                     distance = self.jitter_distance(distance)
                 stimulus = self.sounds[self.sound_type][self.room_dimensions][str(distance)]
-            stimulus = self.crop_sound(stimulus, isi)
             stimulus.level += level_adjust
             print('Playing', self.sound_type, 'in room', self.room_dimensions,
                   'at', str(distance / 100) + 'm')
@@ -126,16 +119,20 @@ class Training:
             # stimulus.play()
             if self.record_response:
                 self.collect_responses(seq)
-                seq.save_json("responses.json", clobber=True)
+        if self.record_response:
+            print("anyad")
+            seq.save_json("responses/" + "participant-" + self.participant_id +
+                          "_training-" + self.sound_type + ".json")
 
     def play_control(self):
-        control_sound = load.load_control(self.sound_type, self.room_dimensions)
+        control_sound = self.sounds[self.sound_type][self.room_dimensions]['control']
         self.load_sound(control_sound)
         freefield.play()
         # control_sound.play()
 
     def play_deviant(self):
-        control_sound = load.load_deviant()
-        self.load_sound(control_sound)
+        deviant_sound = self.sounds['deviant']
+        deviant_sound.level -= 10
+        self.load_sound(deviant_sound)
         freefield.play()
         # control_sound.play()

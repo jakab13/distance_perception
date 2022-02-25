@@ -1,39 +1,37 @@
 from training import Training
 
+participant_id = '53a243'
+
 training = {
-    'bark': Training(sound_type="bark"),
-    'pinknoise': Training(sound_type="pinknoise"),
-    'bum': Training(sound_type="bum"),
-    'lock': Training(sound_type="lock"),
-    'plug': Training(sound_type="plug")
+    # 'bark': Training(sound_type="bark", participant_id=participant_id),
+    'pinknoise': Training(sound_type="pinknoise", participant_id=participant_id),
+    'bum': Training(sound_type="bum", participant_id=participant_id),
+    # 'lock': Training(sound_type="lock", participant_id=participant_id),
+    'plug': Training(sound_type="plug", participant_id=participant_id),
+    'waterdrop': Training(sound_type="waterdrop", participant_id=participant_id)
 }
 
-training['bark'].play_control()
-training['bark'].run(playback_direction='away')
-training['bark'].run(playback_direction='away', isi=0.7)
-training['bark'].run(playback_direction='toward')
-training['bark'].run(playback_direction='toward', isi=1.0)
-training['bark'].run(n_reps=50, record_response=True)
+training['waterdrop'].play_control()
+training['waterdrop'].run(playback_direction='away')
+training['waterdrop'].run(playback_direction='away', isi=0.7)
+training['waterdrop'].run(playback_direction='toward')
+training['waterdrop'].run(playback_direction='toward', isi=1.0)
+training['waterdrop'].run(n_reps=1, record_response=True)
 
 training['bum'].play_control()
-training['bum'].run(playback_direction='away')
+training['bum'].run(playback_direction='away', isi=2.0)
 training['bum'].run(playback_direction='away', isi=0.7)
 training['bum'].run(playback_direction='toward')
 training['bum'].run(playback_direction='toward', isi=1.0)
 training['bum'].run(n_reps=50, record_response=True)
 
-training['lock'].play_control()
-training['lock'].run(playback_direction='away')
-training['lock'].run(playback_direction='away', isi=0.3)
-training['lock'].run(playback_direction='toward')
-training['lock'].run(playback_direction='toward', isi=1.0)
-training['lock'].run(n_reps=50, record_response=True)
+training['plug'].play_control()
+training['plug'].run(playback_direction='away')
+training['plug'].run(playback_direction='away', isi=0.7)
+training['plug'].run(playback_direction='toward')
+training['plug'].run(playback_direction='toward', isi=1.0)
+training['plug'].run(n_reps=1, record_response=True)
 
+training['pinknoise'].play_deviant()
 training['pinknoise'].play_control()
-training['pinknoise'].run(playback_direction='away')
-training['pinknoise'].run(playback_direction='away', isi=0.6)
-training['pinknoise'].run(playback_direction='toward')
-training['pinknoise'].run(playback_direction='toward', isi=1.0)
-training['pinknoise'].run(n_reps=50, record_response=True)
 
-training['plug'].run(playback_direction='toward', isi=0.5)
