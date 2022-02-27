@@ -5,6 +5,7 @@ import pathlib
 import os
 import time
 from pprint import pprint
+import load
 
 # ===========================================================
 
@@ -31,10 +32,10 @@ file_path = DIR / 'experiment' / 'samples' / filename / 'a_weighted'
 
 control_filename = 'AW_A_' + filename + '_control.wav'
 dist_1_filename = 'AW_A_' + filename + '_dist-20.wav'
-dist_2_filename = 'AW_A_' + filename + '_dist-300.wav'
-dist_4_filename = 'AW_A_' + filename + '_dist-1000.wav'
-dist_8_filename = 'AW_A_' + filename + '_dist-2000.wav'
-# dist_16_filename = 'AW_A_' + filename + '_dist-1600.wav'
+dist_2_filename = 'AW_A_' + filename + '_dist-500.wav'
+dist_3_filename = 'AW_A_' + filename + '_dist-1600.wav'
+dist_4_filename = 'AW_A_' + filename + '_dist-2500.wav'
+# dist_5_filename = 'AW_A_' + filename + '_dist-1600.wav'
 
 deviant_filepath = DIR / 'experiment' / 'samples' / 'chirp_room-10-30-3' / 'a_weighted' \
                    / 'AW_A_chirp_room-10-30-3_control.wav'
@@ -44,9 +45,9 @@ sound_filenames = [
     control_filename,
     dist_1_filename,
     dist_2_filename,
+    dist_3_filename,
     dist_4_filename,
-    dist_8_filename,
-    # dist_16_filename
+    # dist_5_filename
 ]
 
 def button_trig(trig_value):
