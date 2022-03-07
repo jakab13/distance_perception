@@ -1,98 +1,114 @@
 import freefield
+import numpy as np
 import slab
 import pathlib
 import os
 import time
+from pprint import pprint
+import load
 
 # ===========================================================
 
-n_reps = 40
-isi = 1
-filename = 'pinknoise_0'
+n_reps = 200
+isi = 1.5
+filename = 'pinknoise_room-10-30-3'
+room = '10-30-3'
+# filename = 'clicktrain'
 # filename = 'whisper'
+# filename = 'bark'
 
 # ============================================================
 
 DIR = pathlib.Path(os.getcwd())  # path for sound and rcx files
 default_samplerate = 48828
-slab.Signal.set_default_samplerate(default_samplerate)
+slab.set_default_samplerate(default_samplerate)
 playbuflen = int(min(isi, 4) * 44100)
 
-proc_list = [['RP2', 'RP2',  DIR / 'data' / 'bi_play_buf.rcx'],
-             ['RX81', 'RX8',  DIR / 'data' / 'play_buf.rcx'],
-             ['RX82', 'RX8', DIR / 'data' / 'play_buf.rcx']]
+proc_list = [['RP2', 'RP2',  DIR / 'experiment' / 'data' / 'bi_play_buf.rcx'],
+             ['RX81', 'RX8',  DIR / 'experiment' / 'data' / 'play_buf.rcx'],
+             ['RX82', 'RX8', DIR / 'experiment' / 'data' / 'play_buf.rcx']]
 
+file_path = DIR / 'experiment' / 'samples' / filename / 'a_weighted'
 
-file_path = DIR / 'samples'
+control_filename = 'AW_A_' + filename + '_control.wav'
+dist_1_filename = 'AW_A_' + filename + '_dist-20.wav'
+dist_2_filename = 'AW_A_' + filename + '_dist-500.wav'
+dist_3_filename = 'AW_A_' + filename + '_dist-1600.wav'
+dist_4_filename = 'AW_A_' + filename + '_dist-2500.wav'
+# dist_5_filename = 'AW_A_' + filename + '_dist-1600.wav'
 
-control_filename = 'AW_A_' + filename + '_long.wav'
-dist_1_filename = 'AW_A_' + filename + '_1m.wav'
-dist_2_filename = 'AW_A_' + filename + '_2m.wav'
-dist_4_filename = 'AW_A_' + filename + '_4m.wav'
-dist_8_filename = 'AW_A_' + filename + '_8m.wav'
-dist_16_filename = 'AW_A_' + filename + '_16m.wav'
+deviant_filepath = DIR / 'experiment' / 'samples' / 'chirp_room-10-30-3' / 'a_weighted' \
+                   / 'AW_A_chirp_room-10-30-3_control.wav'
+control_filepath = file_path / control_filename
 
-deviant_filename = 'manual_adj_chirp_16.wav'
+sound_filenames = [
+    control_filename,
+    dist_1_filename,
+    dist_2_filename,
+    dist_3_filename,
+    dist_4_filename,
+    # dist_5_filename
+]
 
-sound_filenames = [control_filename,
-                   # dist_1_filename,
-                   dist_2_filename,
-                   dist_4_filename,
-                   dist_8_filename,
-                   dist_16_filename]
+def button_trig(trig_value):
+    prev_response = 0
+    while freefield.read(tag="playback", n_samples=1, processor="RP2"):
+        curr_response = freefield.read(tag="response", processor="RP2")
+        if curr_response > prev_response:
+            print("button was pressed")
+            freefield.write(tag='trigcode', value=trig_value, processors='RX82')
+            print("trigcode was set to:", trig_value)
+            freefield.play(proc='RX82')
+        time.sleep(0.01)
+        prev_response = curr_response
 
-def initialise():
-    freefield.initialize('dome', zbus=True, device=proc_list)
-    freefield.set_logger('WARNING')
+freefield.initialize('dome', zbus=True, device=proc_list)
+freefield.set_logger('WARNING')
 
-def run(filenames):
-    deviant_sound = slab.Binaural(file_path / deviant_filename)
-    seq = slab.Trialsequence(conditions=filenames, n_reps=n_reps, deviant_freq=0.1)
+stimuli = [slab.Binaural(file_path / sound_filename) for sound_filename in sound_filenames]
+deviant_sound = slab.Binaural(deviant_filepath)
+stimuli.insert(0, deviant_sound)
+for idx, stimulus in enumerate(stimuli):
+    stimulus_length = len(stimuli[idx].data)
+    if stimulus_length >= playbuflen:
+        stimuli[idx].data = stimuli[idx].data[:playbuflen]
+    else:
+        silence_length = playbuflen - stimulus_length
+        silence = slab.Sound.silence(duration=silence_length, samplerate=stimuli[idx].samplerate)
+        left = slab.Sound(stimuli[idx].data[:, 0], samplerate=stimuli[idx].samplerate)
+        right = slab.Sound(stimuli[idx].data[:, 1], samplerate=stimuli[idx].samplerate)
+        left = slab.Sound.sequence(left, silence)
+        right = slab.Sound.sequence(right, silence)
+        stimuli[idx] = slab.Binaural([left, right])
+    stimuli[idx] = stimuli[idx].ramp(duration=0.02)
 
-    for sound_filename in seq:
-        # set trigger codes for EEG
-        if seq.this_trial == 0:
-            # deviant trigger value
-            trig_value = 1
-        elif seq.this_trial == filenames[0]:
-            trig_value = 2
-        elif seq.this_trial == filenames[1]:
-            trig_value = 3
-        elif seq.this_trial == filenames[2]:
-            trig_value = 4
-        elif seq.this_trial == filenames[3]:
-            trig_value = 5
-        elif seq.this_trial == filenames[4]:
-            trig_value = 6
-        freefield.write(tag='trigcode', value=trig_value, processors='RX82')
-
-        if seq.this_trial != 0:
-            stimulus = slab.Binaural(file_path / sound_filename)
-        else:
-            stimulus = deviant_sound
-        stimulus.data = stimulus.data[:playbuflen]
-        stimulus = stimulus.ramp(duration=0.02)
-
-        # Initialise attributes and data in the .rcx files
-        freefield.write(tag="playbuflen", value=playbuflen, processors="RP2")
-        freefield.write(tag="data_l", value=stimulus.left.data.flatten(), processors="RP2")
-        freefield.write(tag="data_r", value=stimulus.right.data.flatten(), processors="RP2")
-        # Playback sound and record participant interaction
-        freefield.play()
-        print("trial: ", seq.this_n, "soundfile: ", sound_filename)
-        prev_response = 0
-        while freefield.read(tag="playback", n_samples=1, processor="RP2"):
-            curr_response = freefield.read(tag="response", processor="RP2")
-            if curr_response > prev_response:
-                # attention check trigger value
-                trig_value = 7
-                freefield.write(tag='trigcode', value=trig_value, processors='RX82')
-                freefield.play(proc='RX82')
-                print("button was pressed")
-            time.sleep(0.01)
-            prev_response = curr_response
-
-
-initialise()
-run(sound_filenames)
-
+seq = slab.Trialsequence(conditions=[1, 2, 3, 4, 5], n_reps=n_reps, deviant_freq=0.05)
+for stimulus_id in seq:
+    print(stimulus_id)
+    sound = stimuli[stimulus_id]
+    sound_filename = sound_filenames[stimulus_id - 1]
+    # set trigger codes for EEG
+    if stimulus_id == 0:
+        # deviant
+        trig_value = 1
+        sound_filename = 'deviant'
+    elif stimulus_id == 1:
+        # control
+        trig_value = 2
+    elif stimulus_id == 2:
+        trig_value = 3
+    elif stimulus_id == 3:
+        trig_value = 4
+    elif stimulus_id == 4:
+        trig_value = 5
+    elif stimulus_id == 5:
+        trig_value = 6
+    freefield.write(tag='trigcode', value=trig_value, processors='RX82')
+    # Initialise attributes and data in the .rcx files
+    freefield.write(tag="playbuflen", value=playbuflen, processors="RP2")
+    freefield.write(tag="data_l", value=sound.left.data.flatten(), processors="RP2")
+    freefield.write(tag="data_r", value=sound.right.data.flatten(), processors="RP2")
+    # Playback sound and record participant interaction
+    print("playing trial:", seq.this_n, "file:", sound_filename)
+    freefield.play()
+    button_trig(7)
