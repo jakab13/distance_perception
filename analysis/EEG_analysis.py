@@ -8,8 +8,10 @@ import matplotlib.pyplot as plt
 plt.style.use(['seaborn-colorblind', 'seaborn-darkgrid'])
 
 DIR = pathlib.Path(os.getcwd())
-folder_name = '2022_02_04_pinknoise_jakab'
+folder_name = 'pilot/6hz79j'
 folder_path = DIR / 'analysis' / 'data' / folder_name
+
+print(folder_path)
 
 header_files = folder_path.glob('*.vhdr')
 raw_files = []
@@ -29,7 +31,7 @@ ica.fit(raw)
 tmin = -0.3
 tmax = 0.7
 baseline = (-0.2, 0)
-drops=[]
+drops = []
 reject_criteria = dict(eeg=200e-6)
 flat_criteria = dict(eeg=1e-6)
 event_id = {
@@ -63,25 +65,25 @@ mne.viz.plot_compare_evokeds([
     show_sensors='upper right'
 )
 
-mne.viz.plot_compare_evokeds([
-    control,
-    distance_all
-    ],
-    legend='upper left',
-    show_sensors='upper right'
-)
+# mne.viz.plot_compare_evokeds([
+#     control,
+#     distance_all
+#     ],
+#     legend='upper left',
+#     show_sensors='upper right'
+# )
 
-fig = mne.viz.plot_events(events, event_id=event_id, sfreq=raw.info['sfreq'],
-                          first_samp=raw.first_samp)
-
-evoked_diff_2m = mne.combine_evoked([control, distance_2m], weights=[1, -1])
-evoked_diff_4m = mne.combine_evoked([control, distance_4m], weights=[1, -1])
-evoked_diff_8m = mne.combine_evoked([control, distance_8m], weights=[1, -1])
-evoked_diff_16m = mne.combine_evoked([control, distance_16m], weights=[1, -1])
-
-mne.viz.plot_compare_evokeds([
-    evoked_diff_2m,
-    evoked_diff_4m,
-    evoked_diff_8m,
-    evoked_diff_16m
-])
+# fig = mne.viz.plot_events(events, event_id=event_id, sfreq=raw.info['sfreq'],
+#                           first_samp=raw.first_samp)
+#
+# evoked_diff_2m = mne.combine_evoked([control, distance_2m], weights=[1, -1])
+# evoked_diff_4m = mne.combine_evoked([control, distance_4m], weights=[1, -1])
+# evoked_diff_8m = mne.combine_evoked([control, distance_8m], weights=[1, -1])
+# evoked_diff_16m = mne.combine_evoked([control, distance_16m], weights=[1, -1])
+#
+# mne.viz.plot_compare_evokeds([
+#     evoked_diff_2m,
+#     evoked_diff_4m,
+#     evoked_diff_8m,
+#     evoked_diff_16m
+# ])

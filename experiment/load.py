@@ -4,8 +4,8 @@ import os
 from os import listdir
 from os.path import isfile, join
 
-# DIR = pathlib.Path(os.getcwd()) / 'experiment'
-DIR = pathlib.Path(os.getcwd())
+DIR = pathlib.Path(os.getcwd()) / 'experiment'
+# DIR = pathlib.Path(os.getcwd())
 
 
 def load_sounds(sound_type, room_dimensions):
