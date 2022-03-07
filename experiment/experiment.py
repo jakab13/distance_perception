@@ -3,10 +3,8 @@ from training import Training
 participant_id = '53a243'
 
 training = {
-    # 'bark': Training(sound_type="bark", participant_id=participant_id),
     'pinknoise': Training(sound_type="pinknoise", participant_id=participant_id),
     'bum': Training(sound_type="bum", participant_id=participant_id),
-    # 'lock': Training(sound_type="lock", participant_id=participant_id),
     'plug': Training(sound_type="plug", participant_id=participant_id),
     'waterdrop': Training(sound_type="waterdrop", participant_id=participant_id)
 }

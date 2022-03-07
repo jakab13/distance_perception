@@ -13,53 +13,108 @@ slab.Signal.set_default_samplerate(44100)
 DIR = pathlib.Path(os.getcwd())
 
 setup_table = {
-    "bark": {
-        "window": 0.4,
-        "adjust": 8
-    },
-    "bum": {
-        "window": 0.19,
-        "adjust": 8
-    },
-    "chirp": {
+    # "bark": {
+    #     "window": 0.4,
+    #     "adjust": 8
+    # },
+    # "beam": {
+    #     "window": 0.2,
+    #     "adjust": 10
+    # },
+    # "bum": {
+    #     "window": 0.19,
+    #     "adjust": 8
+    # },
+    # "chirp": {
+    #     "window": 0.3,
+    #     "adjust": 50
+    # },
+    # "coin_beep": {
+    #     "window": 0.15,
+    #     "adjust": 25
+    # },
+    # "drip": {
+    #     "window": 0.1,
+    #     "adjust": 15
+    # },
+    # "dunk": {
+    #     "window": 0.3,
+    #     "adjust": 20
+    # },
+    # "glass": {
+    #     "window": 0.15,
+    #     "adjust": 18
+    # },
+    # "lock": {
+    #     "window": 0.15,
+    #     "adjust": 15
+    # },
+    # "pinknoise": {
+    #     "window": 0.25,
+    #     "adjust": 13
+    # },
+    "pinknoise_ramped": {
         "window": 0.25,
-        "adjust": 10
-    },
-    "glass": {
-        "window": 0.15,
-        "adjust": 18
-    },
-    "lock": {
-        "window": 0.15,
         "adjust": 15
     },
-    "pinknoise": {
-        "window": 0.25,
-        "adjust": 13
-    },
-    "plug": {
-        "window": 0.1,
-        "adjust": 12
-    },
-    "sneeze": {
-        "window": 0.4,
-        "adjust": 10
-    },
-    "waterdrop": {
-        "window": 0.15,
-        "adjust": 18
-    },
-    "whisper": {
-        "window": 0.4,
-        "adjust": 10
-    },
-    "wow": {
-        "window": 0.4,
-        "adjust": 5
-    }
+    # "plug": {
+    #     "window": 0.1,
+    #     "adjust": 12
+    # },
+    # "sneeze": {
+    #     "window": 0.4,
+    #     "adjust": 10
+    # },
+    # "sonar_echo": {
+    #     "window": 0.5,
+    #     "adjust": 15
+    # },
+    # "stab": {
+    #     "window": 0.4,
+    #     "adjust": 20
+    # },
+    # "waterdrop": {
+    #     "window": 0.15,
+    #     "adjust": 18
+    # },
+    # "whisper": {
+    #     "window": 0.4,
+    #     "adjust": 10
+    # },
+    # "wow": {
+    #     "window": 0.4,
+    #     "adjust": 5
+    # }
 }
 
-room_dimensions = '30-30-10'
+room_dimensions = '10-30-3'
+
+
+def write_pinknoises(envelope):
+    pinknoise_list = slab.Precomputed(lambda: slab.Binaural.pinknoise(kind="dichotic", duration=0.25), n=1)
+    i = 0
+    for pinknoise in pinknoise_list:
+        left = copy.deepcopy(pinknoise.left)
+        right = copy.deepcopy(pinknoise.right)
+        pinknoise.left = left.filter(frequency=20, kind="hp")
+        pinknoise.right = right.filter(frequency=20, kind="hp")
+        pinknoise = pinknoise.envelope(apply_envelope=envelope)
+        filename = 'pinknoise_' + str(i) + '.wav'
+        pinknoise.write(filename)
+        i += 1
+
+# plug_sound = slab.Binaural(DIR / 'experiment' / 'samples' / 'plug_room-10-30-3' / 'a_weighted'/ 'AW_A_plug_room-10-30-3_control.wav')
+# bum_sound = slab.Binaural(DIR / 'experiment' / 'samples' / 'bum_room-10-30-3' / 'a_weighted'/ 'AW_A_bum_room-10-30-3_control.wav')
+# env = plug_sound.envelope()
+# env = bum_sound.envelope()
+# env = env[:,0]
+# decay_curve = [numpy.exp(-i * 1) for i in range(10)]
+# sound = slab.Binaural.pinknoise(kind="dichotic", duration=0.25)
+# impulse = sound.envelope(apply_envelope=env)
+# impulse.waveform()
+# plug_sound.waveform()
+# impulse.write('pinknoise.wav')
+# write_pinknoises(env)
 
 for filename_core in setup_table:
     adjust = setup_table[filename_core]["adjust"]
@@ -79,25 +134,13 @@ for filename_core in setup_table:
     aligned_sound_filenames = [f for f in listdir(aligned_filepath) if isfile(join(aligned_filepath, f)) and not f.startswith('.')]
     a_weighted_sound_filenames = [f for f in listdir(a_weighted_filepath) if isfile(join(a_weighted_filepath, f)) and not f.startswith('.')]
 
-    def write_pinknoises():
-        pinknoise_list = slab.Precomputed(lambda: slab.Binaural.pinknoise(kind="dichotic", duration=0.25), n=10)
-        i = 0
-        for pinknoise in pinknoise_list:
-            left = copy.deepcopy(pinknoise.left)
-            right = copy.deepcopy(pinknoise.right)
-            pinknoise.left = left.filter(frequency=20, kind="hp")
-            pinknoise.right = right.filter(frequency=20, kind="hp")
-            filename = 'pinknoise_' + str(i) + '.wav'
-            pinknoise.write(filename)
-            i += 1
-
     def align_onset(filename):
         sound = slab.Binaural(filename)
         peaks_left = scipy.signal.find_peaks(sound.data[:, 0], height=0.001)
         peaks_right = scipy.signal.find_peaks(sound.data[:, 1], height=0.001)
         onset_idx = min(peaks_left[0][0], peaks_right[0][0])
-        for chan_num in range(sound.nchannels):
-            length = sound.nsamples
+        for chan_num in range(sound.n_channels):
+            length = sound.n_samples
             sound.data[:length - onset_idx, chan_num] = sound.data[onset_idx:, chan_num]
         return sound
 
@@ -125,7 +168,7 @@ for filename_core in setup_table:
             source_aw = source.aweight()
             aw_level_diff = numpy.average(target_aw.level - source_aw.level)
         out.level = source.level
-        if numpy.amax(out.data) >= 1:
+        if numpy.amax(out.data) > 1:
             raise ValueError("too loud")
         return out
 
