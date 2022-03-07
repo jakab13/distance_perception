@@ -4,11 +4,11 @@ import copy
 import numpy
 import time
 import random
-import config
-import load
+import experiment.config
+import experiment.load
 
 slab.set_default_samplerate(44100)
-config = config.get_config()
+config = experiment.config.get_config()
 proc_list = config['proc_list']
 freefield.initialize('dome', zbus=True, device=proc_list)
 freefield.set_logger('WARNING')
@@ -18,7 +18,7 @@ class Training:
     def __init__(self, participant_id, sound_type="pinknoise", room_dimensions='10-30-3'):
         self.sound_type = sound_type
         self.room_dimensions = room_dimensions
-        self.sounds = load.load_sounds(self.sound_type, self.room_dimensions)
+        self.sounds = experiment.load.load_sounds(self.sound_type, self.room_dimensions)
         self.playback_direction = "random"
         self.record_response = True
         self.jitter_distances = False
@@ -77,10 +77,13 @@ class Training:
 
     def collect_responses(self, seq):
         response = None
+        reaction_time = None
+        start_time = time.time()
         while not freefield.read(tag="response", processor="RP2"):
             time.sleep(0.01)
         curr_response = int(freefield.read(tag="response", processor="RP2"))
         if curr_response != 0:
+            reaction_time = int(round(time.time() - start_time, 3) * 1000)
             response = int(numpy.log2(curr_response)) + 1
             if response == 5:
                 response = 0
@@ -90,14 +93,16 @@ class Training:
         seq.add_response({'solution': seq.trials[seq.this_n],
                           'response': response,
                           'isCorrect': is_correct,
-                          'correct_total': self.correct_total})
+                          'correct_total': self.correct_total,
+                          'rt': reaction_time})
         print('[Response ' + str(response) + ']',
               '(Correct ' + str(self.correct_total) + '/' + str(seq.this_n + 1) + ')')
         while freefield.read(tag="playback", n_samples=1, processor="RP2"):
             time.sleep(0.01)
 
-    def run(self, playback_direction='random', record_response=False, n_reps=1, isi=1.5, level_adjust=0):
+    def run(self, playback_direction='random', record_response=False, n_reps=1, isi=1.5, level=75):
         self.record_response = record_response
+        self.correct_total = 0
         distances = self.get_distances(playback_direction)
         seq = slab.Trialsequence(conditions=distances, trials=self.trials, n_reps=n_reps,
                                  deviant_freq=self.deviant_freq)
@@ -109,7 +114,7 @@ class Training:
                 if self.jitter_distances:
                     distance = self.jitter_distance(distance)
                 stimulus = self.sounds[self.sound_type][self.room_dimensions][str(distance)]
-            stimulus.level += level_adjust
+            stimulus.level = level
             print('Playing', self.sound_type, 'in room', self.room_dimensions,
                   'at', str(distance / 100) + 'm')
             self.load_sound(stimulus, isi)
@@ -122,7 +127,7 @@ class Training:
         if self.record_response:
             print("anyad")
             seq.save_json("responses/" + "participant-" + self.participant_id +
-                          "_training-" + self.sound_type + ".json")
+                          "_training-" + self.sound_type + "_" + str(int(time.time())) + ".json")
 
     def play_control(self):
         control_sound = self.sounds[self.sound_type][self.room_dimensions]['control']

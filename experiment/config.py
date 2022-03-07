@@ -1,8 +1,8 @@
 import pathlib
 import os
 
-# DIR = pathlib.Path(os.getcwd()) / 'experiment'
-DIR = pathlib.Path(os.getcwd())
+DIR = pathlib.Path(os.getcwd()) / 'experiment'
+# DIR = pathlib.Path(os.getcwd())
 
 def get_config():
     config_obj = {}
@@ -10,8 +10,8 @@ def get_config():
                  ['RX81', 'RX8', DIR / 'data' / 'play_buf.rcx'],
                  ['RX82', 'RX8', DIR / 'data' / 'play_buf.rcx']]
     distances = {
-        'detailed': [0.2, 0.4, 0.6, 0.8, 1, 1.6, 2.2, 3.0, 4, 5, 7, 10, 13, 16, 18],
-        'sparse': [0.2, 3, 10, 18]
+        'detailed': [0.2, 0.6, 1, 2, 3, 5, 7, 9, 12, 15, 18],
+        'sparse': [0.2, 2, 10, 18]
     }
     config_obj['proc_list'] = proc_list
     config_obj['distances'] = distances

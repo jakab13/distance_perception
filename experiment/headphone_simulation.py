@@ -9,10 +9,11 @@ import load
 
 # ===========================================================
 
-n_reps = 200
+n_reps = 60
 isi = 1.5
-filename = 'pinknoise_room-10-30-3'
+filename = 'pinknoise_ramped_room-10-30-3'
 room = '10-30-3'
+level = 65
 # filename = 'clicktrain'
 # filename = 'whisper'
 # filename = 'bark'
@@ -32,10 +33,10 @@ file_path = DIR / 'experiment' / 'samples' / filename / 'a_weighted'
 
 control_filename = 'AW_A_' + filename + '_control.wav'
 dist_1_filename = 'AW_A_' + filename + '_dist-20.wav'
-dist_2_filename = 'AW_A_' + filename + '_dist-500.wav'
-dist_3_filename = 'AW_A_' + filename + '_dist-1600.wav'
-dist_4_filename = 'AW_A_' + filename + '_dist-2500.wav'
-# dist_5_filename = 'AW_A_' + filename + '_dist-1600.wav'
+dist_2_filename = 'AW_A_' + filename + '_dist-200.wav'
+dist_4_filename = 'AW_A_' + filename + '_dist-1000.wav'
+dist_8_filename = 'AW_A_' + filename + '_dist-2000.wav'
+# dist_16_filename = 'AW_A_' + filename + '_dist-1600.wav'
 
 deviant_filepath = DIR / 'experiment' / 'samples' / 'chirp_room-10-30-3' / 'a_weighted' \
                    / 'AW_A_chirp_room-10-30-3_control.wav'
@@ -45,9 +46,9 @@ sound_filenames = [
     control_filename,
     dist_1_filename,
     dist_2_filename,
-    dist_3_filename,
     dist_4_filename,
-    # dist_5_filename
+    dist_8_filename,
+    # dist_16_filename
 ]
 
 def button_trig(trig_value):
@@ -82,10 +83,14 @@ for idx, stimulus in enumerate(stimuli):
         stimuli[idx] = slab.Binaural([left, right])
     stimuli[idx] = stimuli[idx].ramp(duration=0.02)
 
-seq = slab.Trialsequence(conditions=[1, 2, 3, 4, 5], n_reps=n_reps, deviant_freq=0.05)
+seq = slab.Trialsequence(conditions=[1, 2, 3, 4, 5], n_reps=n_reps, deviant_freq=0.1)
 for stimulus_id in seq:
     print(stimulus_id)
     sound = stimuli[stimulus_id]
+    if stimulus_id == 1 or stimulus_id == 0:
+        sound.level = level - 5
+    else:
+        sound.level = level
     sound_filename = sound_filenames[stimulus_id - 1]
     # set trigger codes for EEG
     if stimulus_id == 0:
