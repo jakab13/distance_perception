@@ -4,11 +4,11 @@ import copy
 import numpy
 import time
 import random
-import experiment.config
-import experiment.load
+from experiment.config import get_config
+from experiment.load import load_sounds
 
 slab.set_default_samplerate(44100)
-config = experiment.config.get_config()
+config = get_config()
 proc_list = config['proc_list']
 freefield.initialize('dome', zbus=True, device=proc_list)
 freefield.set_logger('WARNING')
@@ -18,7 +18,7 @@ class Training:
     def __init__(self, participant_id, sound_type="pinknoise", room_dimensions='10-30-3'):
         self.sound_type = sound_type
         self.room_dimensions = room_dimensions
-        self.sounds = experiment.load.load_sounds(self.sound_type, self.room_dimensions)
+        self.sounds = load_sounds(self.sound_type, self.room_dimensions)
         self.playback_direction = "random"
         self.record_response = True
         self.jitter_distances = False
