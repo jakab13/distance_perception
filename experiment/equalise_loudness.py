@@ -10,7 +10,7 @@ from os.path import isfile, join
 
 slab.Signal.set_default_samplerate(44100)
 
-DIR = pathlib.Path(os.getcwd())
+DIR = pathlib.Path(__file__).parent.absolute()
 
 setup_table = {
     # "bark": {
