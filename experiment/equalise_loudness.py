@@ -122,22 +122,21 @@ if not os.path.exists(a_weighted_folder_path):
 
 a_weighted_sound_filenames = [f for f in listdir(a_weighted_folder_path) if isfile(abspath(join(a_weighted_folder_path, f))) and not f.startswith('.')]
 
-def align_onset(filename):
-    sound = slab.Binaural(filename)
+def align_onset(file_path):
+    sound = slab.Binaural(file_path)
     peaks_left = scipy.signal.find_peaks(sound.data[:, 0], height=0.001)
     peaks_right = scipy.signal.find_peaks(sound.data[:, 1], height=0.001)
     onset_idx = min(peaks_left[0][0], peaks_right[0][0])
-    # for chan_num in range(sound.n_channels):
     length = sound.n_samples
     sound.data[:length - onset_idx] = sound.data[onset_idx:]
     return sound
 
-def write_aligned_files(simulated_folder_path):
-    file_paths = [f for f in abs_file_paths(simulated_folder_path)]
+def write_aligned_files(folder_path):
+    file_paths = [f for f in abs_file_paths(folder_path)]
     for file_path in file_paths:
         aligned_sound = align_onset(file_path)
         out_filename = 'A_' + file_path.name
-        aligned_folder_path = simulated_folder_path.parent / 'aligned'
+        aligned_folder_path = folder_path.parent / 'aligned'
         if not os.path.exists(aligned_folder_path):
             os.makedirs(aligned_folder_path)
         aligned_sound.write(aligned_folder_path / out_filename, normalise=False)
