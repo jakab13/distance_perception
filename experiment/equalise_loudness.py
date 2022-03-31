@@ -141,26 +141,24 @@ def write_aligned_files(folder_path):
             os.makedirs(aligned_folder_path)
         aligned_sound.write(aligned_folder_path / out_filename, normalise=False)
 
-def equalise_a_weight(target_filename, source_filename, length):
-    target = slab.Binaural(target_filename)
-    source = slab.Binaural(source_filename)
-    out = copy.deepcopy(source)
-    length_in_samples = slab.Signal.in_samples(length, target.samplerate)
-    target.data = target.data[:length_in_samples]
-    source.data = source.data[:length_in_samples]
-    target.level -= adjust
-    source.level -= adjust
-    target_aw = target.aweight()
-    source_aw = source.aweight()
+def equalise_a_weight(target, source, win_length=0.25):
+    target_copy = copy.deepcopy(target)
+    source_copy = copy.deepcopy(source)
+    win_length = slab.Signal.in_samples(win_length, target_copy.samplerate)
+    target_copy.data = target_copy.data[:win_length]
+    source_copy.data = source_copy.data[:win_length]
+    windowed_source_level = source_copy.level
+    target_aw = target_copy.aweight()
+    source_aw = source_copy.aweight()
     aw_level_diff = numpy.average(target_aw.level - source_aw.level)
-    min_level_diff = 0.01
-    while aw_level_diff > min_level_diff:
-        source.level += 1
-        source_aw = source.aweight()
+    while aw_level_diff > 0:
+        source_copy.level += 0.5
+        source_aw = source_copy.aweight()
         aw_level_diff = numpy.average(target_aw.level - source_aw.level)
-    out.level = source.level
-    if numpy.amax(out.data) > 1:
-        raise ValueError("too loud")
+    if numpy.amax(source_copy.data) > 1:
+        print('Calibration is clipping the output sound, please adjust target sound level')
+    out = copy.deepcopy(source)
+    out.level += source_copy.level - windowed_source_level
     return out
 
 def write_equalised_files(aligned_filepath):
