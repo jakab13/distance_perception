@@ -18,63 +18,6 @@ simulated_folder_path = DIR / 'experiment' / 'samples' / sound_category / 'simul
 aligned_folder_path = DIR / 'experiment' / 'samples' / sound_category / 'aligned'
 a_weighted_folder_path = DIR / 'experiment' / 'samples' / sound_category / 'a_weighted'
 
-setup_table = {
-    "bark": {
-        "window": 0.4,
-    },
-    # "beam": {
-    #     "window": 0.2,
-    # },
-    # "bum": {
-    #     "window": 0.19,
-    # },
-    # "chirp": {
-    #     "window": 0.3,
-    # },
-    # "coin_beep": {
-    #     "window": 0.15,
-    # },
-    # "drip": {
-    #     "window": 0.1,
-    # },
-    "dunk": {
-        "window": 0.3,
-    },
-    # "glass": {
-    #     "window": 0.15,
-    # },
-    # "lock": {
-    #     "window": 0.15,
-    # },
-    # "pinknoise": {
-    #     "window": 0.25,
-    # },
-    "pinknoise_ramped": {
-        "window": 0.25,
-    },
-    # "plug": {
-    #     "window": 0.1,
-    # },
-    # "sneeze": {
-    #     "window": 0.4,
-    # },
-    # "sonar_echo": {
-    #     "window": 0.5,
-    # },
-    # "stab": {
-    #     "window": 0.4,
-    # },
-    # "waterdrop": {
-    #     "window": 0.15,
-    # },
-    # "whisper": {
-    #     "window": 0.4,
-    # },
-    # "wow": {
-    #     "window": 0.4,
-    # }
-}
-
 def abs_file_paths(directory):
     for dirpath,_,filenames in os.walk(directory):
         for f in filenames:
