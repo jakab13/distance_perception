@@ -4,6 +4,7 @@ import glob
 import numpy as np
 import mne
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import json
 
 DIR = pathlib.Path(os.getcwd())
@@ -27,20 +28,40 @@ raw = mne.concatenate_raws(raw_files)
 # TODO: Bad channels should be identified and saved right after the 'raw' dictionary has been created
 # It is also recommended to use the Autoreject toolbox for bad channel selection and interpolation
 
+ch_dict = {"1": 'Fp1', "2": 'Fp2', "3": 'F7', "4": 'F3', "5": 'Fz', "6": 'F4', "7": 'F8', "8": 'FC5',
+           "9": 'FC1', "10": 'FC2', "11": 'FC6', "12": 'T7', "13": 'C3', "14": 'Cz', "15": 'C4', "16": 'T8',
+           "17": 'TP9', "18": 'CP5', "19": 'CP1', "20": 'CP2', "21": 'CP6', "22": 'TP10', "23": 'P7', "24": 'P3',
+           "25": 'Pz', "26": 'P4', "27": 'P8', "28": 'PO9', "29": 'O1', "30": 'Oz', "31": 'O2', "32": 'PO10',
+           "33": 'AF7', "34": 'AF3', "35": 'AF4', "36": 'AF8', "37": 'F5', "38": 'F1', "39": 'F2', "40": 'F6',
+           "41": 'FT9', "42": 'FT7', "43": 'FC3', "44": 'FC4', "45": 'FT8', "46": 'FT10', "47": 'C5', "48": 'C1',
+           "49": 'C2', "50": 'C6', "51": 'TP7', "52": 'CP3', "53": 'CPz', "54": 'CP4', "55": 'TP8', "56": 'P5',
+           "57": 'P1', "58": 'P2', "59": 'P6', "60": 'PO7', "61": 'PO3', "62": 'POz', "63": 'PO4', "64": 'PO8'}
+ch_names = [ch_name for ch_number, ch_name in ch_dict.items()]
+ch_types = ['eeg'] * 64
+sfreq = raw.info['sfreq']
+info = mne.create_info(ch_names=ch_names, ch_types=ch_types, sfreq=sfreq)
+
+# Montage #1 using the 'biosemi64' setup which has 64 channels by default
+info.set_montage('biosemi64')
+
+# Montage #2 using the 'easycap-M1' setup
+# based on https://github.com/fieldtrip/fieldtrip/blob/master/template/layout/acticap-64ch-standard2.mat
+# montage = mne.channels.make_standard_montage('easycap-M1')
+
+# Montage #3 using the 'standard_1020' setup and keeping only the relevant channels
+info.set_montage('standard_1020')
+
+custom_raw = mne.io.RawArray(raw.get_data(), info)
+custom_montage = custom_raw.get_montage()
+
+fig = custom_montage.plot(kind='3d')
+fig.gca().view_init(azim=70, elev=15)
+custom_montage.plot(kind='topomap')
+
 events = mne.events_from_annotations(raw)
 events = events[0]
 
 raw.filter(0.5, 40)
-
-montage = mne.channels.make_standard_montage('easycap-M1')
-channel_dict = {"1": 'Fp1', "2": 'AF7', "3": 'AF3', "4": 'F1', "5": 'F3', "6": 'F5', "7": 'F7', "8": 'FT7', "9": 'FC5', "10": 'FC3', "11": 'FC1', "12": 'C1', "13": 'C3', "14": 'C5', "15": 'T7', "16": 'TP7', "17": 'CP5', "18": 'CP3', "19": 'CP1', "20": 'P1', "21": 'P3', "22": 'P5', "23": 'P7', "24": 'P9', "25": 'PO7', "26": 'PO3', "27": 'O1', "28": 'Iz', "29": 'Oz', "30": 'POz', "31": 'Pz', "32": 'CPz', "33": 'Fpz', "34": 'Fp2', "35": 'AF8', "36": 'AF4', "37": 'AFz', "38": 'Fz', "39": 'F2', "40": 'F4', "41": 'F6', "42": 'F8', "43": 'FT8', "44": 'FC6', "45": 'FC4', "46": 'FC2', "47": 'FCz', "48": 'Cz', "49": 'C2', "50": 'C4', "51": 'C6', "52": 'T8', "53": 'TP8', "54": 'CP6', "55": 'CP4', "56": 'CP2', "57": 'P2', "58": 'P4', "59": 'P6', "60": 'P8', "61": 'P10', "62": 'PO8', "63": 'PO4', "64": 'O2'}
-ch_names = ['Fp1', 'AF7', 'AF3', 'F1', 'F3', 'F5', 'F7', 'FT7','FC5', 'FC3', 'FC1', 'C1', 'C3', 'C5', 'T7', 'TP7', 'CP5', 'CP3', 'CP1', 'P1', 'P3', 'P5', 'P7', 'P9', 'PO7', 'PO3', 'O1', 'Iz', 'Oz', 'POz', 'Pz', 'CPz', 'Fpz', 'Fp2', 'AF8', 'AF4', 'AFz', 'Fz', 'F2', 'F4', 'F6', 'F8', 'FT8', 'FC6', 'FC4', 'FC2', 'FCz', 'Cz', 'C2', 'C4', 'C6', 'T8', 'TP8', 'CP6', 'CP4', 'CP2', 'P2', 'P4', 'P6', 'P8', 'P10', 'PO8', 'PO4', 'O2']
-ch_types = ['eeg'] * 64
-sfreq = raw.info['sfreq']
-info = mne.create_info(ch_names=ch_names, ch_types=ch_types, sfreq=sfreq)
-info.set_montage('biosemi64')
-
-custom_raw = mne.io.RawArray(raw.get_data(), info)
 
 ica = mne.preprocessing.ICA(n_components=0.99, method="fastica")
 ica.fit(custom_raw)
