@@ -99,11 +99,11 @@ def generate_equalised_files(folder_path, win_length=0.25):
     a_weigthed_folder_path = folder_path.parent / 'a_weighted'
     if not os.path.exists(a_weigthed_folder_path):
         os.makedirs(a_weigthed_folder_path)
-    out_filename = 'AW_' + target_file_path[0].name
-    target.write(a_weigthed_folder_path / out_filename, normalise=False)
+    target_out_filename = 'AW_' + target_file_path[0].name
+    target.write(a_weigthed_folder_path / target_out_filename, normalise=False)
     for file_name, sound in equalised_sources.items():
-        out_filename = 'AW_' + file_name
-        sound.write(a_weigthed_folder_path / out_filename, normalise=False)
+        source_out_filename = 'AW_' + file_name
+        sound.write(a_weigthed_folder_path / source_out_filename, normalise=False)
     print('Done writing files')
 
 # generate_aligned_files(simulated_folder_path)
