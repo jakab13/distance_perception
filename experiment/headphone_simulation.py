@@ -20,7 +20,7 @@ level = 65
 
 # ============================================================
 
-DIR = pathlib.Path(os.getcwd())  # path for sound and rcx files
+DIR = pathlib.Path(__file__).parent.absolute()
 default_samplerate = 48828
 slab.set_default_samplerate(default_samplerate)
 playbuflen = int(min(isi, 4) * 44100)
