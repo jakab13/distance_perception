@@ -37,8 +37,7 @@ def write_pinknoises(envelope):
         pinknoise.write(filename)
         i += 1
 
-def align_onset(file_path):
-    sound = slab.Binaural(file_path)
+def align_onset(sound):
     peaks_left = scipy.signal.find_peaks(sound.data[:, 0], height=0.001)
     peaks_right = scipy.signal.find_peaks(sound.data[:, 1], height=0.001)
     onset_idx = min(peaks_left[0][0], peaks_right[0][0])
@@ -49,7 +48,8 @@ def align_onset(file_path):
 def generate_aligned_files(folder_path):
     file_paths = [f for f in abs_file_paths(folder_path)]
     for file_path in file_paths:
-        aligned_sound = align_onset(file_path)
+        sound = slab.Binaural(file_path)
+        aligned_sound = align_onset(sound)
         out_filename = 'A_' + file_path.name
         aligned_folder_path = folder_path.parent / 'aligned'
         if not os.path.exists(aligned_folder_path):
@@ -59,6 +59,8 @@ def generate_aligned_files(folder_path):
 def equalise_a_weight(target, source, win_length=0.25):
     target_copy = copy.deepcopy(target)
     source_copy = copy.deepcopy(source)
+    target_copy = align_onset(target_copy)
+    source_copy = align_onset(source_copy)
     win_length = slab.Signal.in_samples(win_length, target_copy.samplerate)
     target_copy.data = target_copy.data[:win_length]
     source_copy.data = source_copy.data[:win_length]
