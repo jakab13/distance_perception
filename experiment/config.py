@@ -1,8 +1,7 @@
 import pathlib
 import os
 
-DIR = pathlib.Path(os.getcwd()) / 'experiment'
-# DIR = pathlib.Path(os.getcwd())
+DIR = pathlib.Path(__file__).parent.absolute()
 
 def get_config():
     config_obj = {}

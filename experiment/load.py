@@ -6,8 +6,7 @@ from os.path import isfile, join
 import random
 import string
 
-DIR = pathlib.Path(os.getcwd()) / 'experiment'
-# DIR = pathlib.Path(os.getcwd())
+DIR = pathlib.Path(__file__).parent.absolute()
 
 def generate_id():
     characters = string.ascii_lowercase + string.digits
