@@ -1,6 +1,0 @@
-import random
-import string
-
-characters = string.ascii_lowercase + string.digits
-ID = ''.join(random.choice(characters) for i in range(6))
-print("Participant ID is:", ID)
