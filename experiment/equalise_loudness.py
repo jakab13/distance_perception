@@ -5,90 +5,24 @@ import copy
 import numpy
 import scipy
 from scipy import signal
-from os import listdir
-from os.path import isfile, join
+from os.path import join
 
 slab.Signal.set_default_samplerate(44100)
+DIR = pathlib.Path(__file__).parent.parent.absolute()
 
-DIR = pathlib.Path(__file__).parent.absolute()
-
-setup_table = {
-    # "bark": {
-    #     "window": 0.4,
-    #     "adjust": 8
-    # },
-    # "beam": {
-    #     "window": 0.2,
-    #     "adjust": 10
-    # },
-    # "bum": {
-    #     "window": 0.19,
-    #     "adjust": 8
-    # },
-    # "chirp": {
-    #     "window": 0.3,
-    #     "adjust": 50
-    # },
-    # "coin_beep": {
-    #     "window": 0.15,
-    #     "adjust": 25
-    # },
-    # "drip": {
-    #     "window": 0.1,
-    #     "adjust": 15
-    # },
-    # "dunk": {
-    #     "window": 0.3,
-    #     "adjust": 20
-    # },
-    # "glass": {
-    #     "window": 0.15,
-    #     "adjust": 18
-    # },
-    # "lock": {
-    #     "window": 0.15,
-    #     "adjust": 15
-    # },
-    # "pinknoise": {
-    #     "window": 0.25,
-    #     "adjust": 13
-    # },
-    "pinknoise_ramped": {
-        "window": 0.25,
-        "adjust": 15
-    },
-    # "plug": {
-    #     "window": 0.1,
-    #     "adjust": 12
-    # },
-    # "sneeze": {
-    #     "window": 0.4,
-    #     "adjust": 10
-    # },
-    # "sonar_echo": {
-    #     "window": 0.5,
-    #     "adjust": 15
-    # },
-    # "stab": {
-    #     "window": 0.4,
-    #     "adjust": 20
-    # },
-    # "waterdrop": {
-    #     "window": 0.15,
-    #     "adjust": 18
-    # },
-    # "whisper": {
-    #     "window": 0.4,
-    #     "adjust": 10
-    # },
-    # "wow": {
-    #     "window": 0.4,
-    #     "adjust": 5
-    # }
-}
-
+filename_core = 'bark'
 room_dimensions = '10-30-3'
+sound_category = filename_core + '_' + 'room-' + room_dimensions
+folder_core = DIR / 'experiment' / 'samples' / sound_category
+simulated_folder_path = DIR / 'experiment' / 'samples' / sound_category / 'simulated'
+aligned_folder_path = DIR / 'experiment' / 'samples' / sound_category / 'aligned'
+a_weighted_folder_path = DIR / 'experiment' / 'samples' / sound_category / 'a_weighted'
 
+def abs_file_paths(directory):
+    for dirpath,_,filenames in os.walk(directory):
+        for f in filenames:
+            if not f.startswith('.'):
+                yield pathlib.Path(join(dirpath, f))
 
 def write_pinknoises(envelope):
     pinknoise_list = slab.Precomputed(lambda: slab.Binaural.pinknoise(kind="dichotic", duration=0.25), n=1)
@@ -103,90 +37,74 @@ def write_pinknoises(envelope):
         pinknoise.write(filename)
         i += 1
 
-# plug_sound = slab.Binaural(DIR / 'experiment' / 'samples' / 'plug_room-10-30-3' / 'a_weighted'/ 'AW_A_plug_room-10-30-3_control.wav')
-# bum_sound = slab.Binaural(DIR / 'experiment' / 'samples' / 'bum_room-10-30-3' / 'a_weighted'/ 'AW_A_bum_room-10-30-3_control.wav')
-# env = plug_sound.envelope()
-# env = bum_sound.envelope()
-# env = env[:,0]
-# decay_curve = [numpy.exp(-i * 1) for i in range(10)]
-# sound = slab.Binaural.pinknoise(kind="dichotic", duration=0.25)
-# impulse = sound.envelope(apply_envelope=env)
-# impulse.waveform()
-# plug_sound.waveform()
-# impulse.write('pinknoise.wav')
-# write_pinknoises(env)
+def align_onset(sound):
+    peaks_left = scipy.signal.find_peaks(sound.data[:, 0], height=0.001)
+    peaks_right = scipy.signal.find_peaks(sound.data[:, 1], height=0.001)
+    onset_idx = min(peaks_left[0][0], peaks_right[0][0])
+    length = sound.n_samples
+    sound.data[:length - onset_idx] = sound.data[onset_idx:]
+    return sound
 
-for filename_core in setup_table:
-    adjust = setup_table[filename_core]["adjust"]
+def generate_aligned_files(folder_path):
+    file_paths = [f for f in abs_file_paths(folder_path)]
+    for file_path in file_paths:
+        sound = slab.Binaural(file_path)
+        aligned_sound = align_onset(sound)
+        out_filename = 'A_' + file_path.name
+        aligned_folder_path = folder_path.parent / 'aligned'
+        if not os.path.exists(aligned_folder_path):
+            os.makedirs(aligned_folder_path)
+        aligned_sound.write(aligned_folder_path / out_filename, normalise=False)
 
-    file_category = filename_core + '_' + 'room-' + room_dimensions
-    simulated_filepath = DIR / 'experiment' / 'samples' / file_category / 'simulated'
-    aligned_filepath = DIR / 'experiment' / 'samples' / file_category / 'aligned'
-    a_weighted_filepath = DIR / 'experiment' / 'samples' / file_category / 'a_weighted'
-
-    if not os.path.exists(aligned_filepath):
-        os.makedirs(aligned_filepath)
-
-    if not os.path.exists(a_weighted_filepath):
-        os.makedirs(a_weighted_filepath)
-
-    simulated_sound_filenames = [f for f in listdir(simulated_filepath) if isfile(join(simulated_filepath, f)) and not f.startswith('.')]
-    aligned_sound_filenames = [f for f in listdir(aligned_filepath) if isfile(join(aligned_filepath, f)) and not f.startswith('.')]
-    a_weighted_sound_filenames = [f for f in listdir(a_weighted_filepath) if isfile(join(a_weighted_filepath, f)) and not f.startswith('.')]
-
-    def align_onset(filename):
-        sound = slab.Binaural(filename)
-        peaks_left = scipy.signal.find_peaks(sound.data[:, 0], height=0.001)
-        peaks_right = scipy.signal.find_peaks(sound.data[:, 1], height=0.001)
-        onset_idx = min(peaks_left[0][0], peaks_right[0][0])
-        for chan_num in range(sound.n_channels):
-            length = sound.n_samples
-            sound.data[:length - onset_idx, chan_num] = sound.data[onset_idx:, chan_num]
-        return sound
-
-    def write_aligned_files(filepath, filenames):
-        for filename in filenames:
-            aligned_sound = align_onset(filepath / filename)
-            out_filename = 'A_' + filename
-            aligned_sound.write(aligned_filepath / out_filename, normalise=False)
-
-    def equalise_a_weight(target_filename, source_filename, length):
-        target = slab.Binaural(target_filename)
-        source = slab.Binaural(source_filename)
-        out = copy.deepcopy(source)
-        length_in_samples = slab.Signal.in_samples(length, target.samplerate)
-        target.data = target.data[:length_in_samples]
-        source.data = source.data[:length_in_samples]
-        target.level -= adjust
-        source.level -= adjust
-        target_aw = target.aweight()
-        source_aw = source.aweight()
+def equalise_a_weight(target, source, win_length=0.25):
+    target_copy = copy.deepcopy(target)
+    source_copy = copy.deepcopy(source)
+    target_copy = align_onset(target_copy)
+    source_copy = align_onset(source_copy)
+    win_length = slab.Signal.in_samples(win_length, target_copy.samplerate)
+    target_copy.data = target_copy.data[:win_length]
+    source_copy.data = source_copy.data[:win_length]
+    windowed_source_level = source_copy.level
+    target_aw = target_copy.aweight()
+    source_aw = source_copy.aweight()
+    aw_level_diff = numpy.average(target_aw.level - source_aw.level)
+    while aw_level_diff > 0:
+        source_copy.level += 0.5
+        source_aw = source_copy.aweight()
         aw_level_diff = numpy.average(target_aw.level - source_aw.level)
-        min_level_diff = 0.01
-        while aw_level_diff > min_level_diff:
-            source.level += 1
-            source_aw = source.aweight()
-            aw_level_diff = numpy.average(target_aw.level - source_aw.level)
-        out.level = source.level
-        if numpy.amax(out.data) > 1:
-            raise ValueError("too loud")
-        return out
+    if numpy.amax(source_copy.data) > 1:
+        print('Calibration is clipping the output sound, please adjust target sound level')
+    out = copy.deepcopy(source)
+    out.level += source_copy.level - windowed_source_level
+    return out
 
-    def write_equalised_files(aligned_filepath):
+def generate_equalised_files(folder_path, win_length=0.25):
+    file_paths = [f for f in abs_file_paths(folder_path)]
+    target_file_path = [f for f in file_paths if "control" in f.name]
+    source_file_paths = [f for f in file_paths if "dist" in f.name]
+    target = slab.Binaural(target_file_path[0])
+    equalised_sources = {}
+    is_clipping = True
+    while is_clipping:
+        for source_file_path in source_file_paths:
+            source = slab.Binaural(source_file_path)
+            out = equalise_a_weight(target, source, win_length)
+            if numpy.amax(out.data) > 1:
+                is_clipping = True
+                target.level -= 0.5
+                break
+            else:
+                equalised_sources[source_file_path.name] = out
+                is_clipping = False
+    a_weigthed_folder_path = folder_path.parent / 'a_weighted'
+    if not os.path.exists(a_weigthed_folder_path):
+        os.makedirs(a_weigthed_folder_path)
+    target_out_filename = 'AW_' + target_file_path[0].name
+    target.write(a_weigthed_folder_path / target_out_filename, normalise=False)
+    for file_name, sound in equalised_sources.items():
+        source_out_filename = 'AW_' + file_name
+        sound.write(a_weigthed_folder_path / source_out_filename, normalise=False)
+    print('Done writing files')
 
-        aligned_target_filenames = [s for s in aligned_sound_filenames if "dist" not in s]
-        for aligned_target_filename in aligned_target_filenames:
-            aligned_source_filenames = [s for s in aligned_sound_filenames if "dist" in s]
-            for aligned_source_filename in aligned_source_filenames:
-                window_length = setup_table[filename_core]["window"]
-                aw_source = equalise_a_weight(aligned_filepath / aligned_target_filename, aligned_filepath / aligned_source_filename, window_length)
-                output_filename = 'AW_' + aligned_source_filename
-                aw_source.write(a_weighted_filepath / output_filename, normalise=False)
-                print('writing ', output_filename)
-
-            target = slab.Binaural(aligned_filepath / aligned_target_filename)
-            output_filename = 'AW_' + aligned_target_filename
-            target.write(a_weighted_filepath / output_filename, normalise=False)
-
-    # write_aligned_files(simulated_filepath, simulated_sound_filenames)
-    write_equalised_files(aligned_filepath)
+# generate_aligned_files(simulated_folder_path)
+generate_equalised_files(aligned_folder_path)
