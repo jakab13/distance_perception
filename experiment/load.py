@@ -3,8 +3,16 @@ import pathlib
 import os
 from os import listdir
 from os.path import isfile, join
+import random
+import string
 
 DIR = pathlib.Path(__file__).parent.absolute()
+
+def generate_id():
+    characters = string.ascii_lowercase + string.digits
+    ID = ''.join(random.choice(characters) for i in range(6))
+    print("Participant ID is:", ID)
+    return ID
 
 def load_sounds(sound_type, room_dimensions):
     loaded_sound_obj = {
