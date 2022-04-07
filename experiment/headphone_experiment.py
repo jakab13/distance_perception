@@ -1,11 +1,11 @@
-from training import Training
+from trials import Trials
 
 training = {
-    'bark': Training(sound_type="bark"),
-    'pinknoise': Training(sound_type="pinknoise"),
-    'bum': Training(sound_type="bum"),
-    'lock': Training(sound_type="lock"),
-    'plug': Training(sound_type="plug")
+    'bark': Trials(sound_type="bark"),
+    'pinknoise': Trials(sound_type="pinknoise"),
+    'bum': Trials(sound_type="bum"),
+    'lock': Trials(sound_type="lock"),
+    'plug': Trials(sound_type="plug")
 }
 
 training['bark'].play_control()

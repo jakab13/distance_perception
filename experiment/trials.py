@@ -14,7 +14,7 @@ freefield.initialize('dome', zbus=True, device=proc_list)
 freefield.set_logger('WARNING')
 
 
-class Training:
+class Trials:
     def __init__(self, participant_id, sound_type="pinknoise", room_dimensions='10-30-3'):
         self.sound_type = sound_type
         self.room_dimensions = room_dimensions

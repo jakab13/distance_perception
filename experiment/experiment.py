@@ -1,16 +1,16 @@
-from experiment.training import Training
+from experiment.trials import Trials
 
 participant_id = '6hz79j'
 
 training = {
-    'bark': Training(sound_type="bark", participant_id=participant_id),
-    'bum': Training(sound_type="bum", participant_id=participant_id),
-    'chirp': Training(sound_type="chirp", participant_id=participant_id),
-    'dunk': Training(sound_type="dunk", participant_id=participant_id),
-    'pinknoise': Training(sound_type="pinknoise", participant_id=participant_id),
-    'pinknoise_ramped': Training(sound_type="pinknoise_ramped", participant_id=participant_id),
-    'plug': Training(sound_type="plug", participant_id=participant_id),
-    'waterdrop': Training(sound_type="waterdrop", participant_id=participant_id),
+    'bark': Trials(sound_type="bark", participant_id=participant_id),
+    'bum': Trials(sound_type="bum", participant_id=participant_id),
+    'chirp': Trials(sound_type="chirp", participant_id=participant_id),
+    'dunk': Trials(sound_type="dunk", participant_id=participant_id),
+    'pinknoise': Trials(sound_type="pinknoise", participant_id=participant_id),
+    'pinknoise_ramped': Trials(sound_type="pinknoise_ramped", participant_id=participant_id),
+    'plug': Trials(sound_type="plug", participant_id=participant_id),
+    'waterdrop': Trials(sound_type="waterdrop", participant_id=participant_id),
 }
 
 training['bark'].play_control()
@@ -58,3 +58,4 @@ training['pinknoise_ramped'].run(n_reps=5, record_response=True, level=65)
 training['pinknoise_ramped'].play_deviant()
 training['pinknoise_ramped'].play_control()
 
+experiment = Trials(sound_type="pinknoise_ramped")
