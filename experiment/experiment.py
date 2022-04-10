@@ -1,6 +1,8 @@
+import os
 from experiment.trials import Trials
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
-participant_id = '6hz79j'
+participant_id = 'hannah'
 
 training = {
     'bark': Trials(sound_type="bark", participant_id=participant_id),
