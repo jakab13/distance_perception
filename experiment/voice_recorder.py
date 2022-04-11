@@ -14,33 +14,35 @@ effort_level = "1"
 #######################################################################
 
 # DIR = pathlib.Path(__file__).parent.absolute()
-DIR = Path.cwd() / 'experiment' / 'samples' / "laughter_" + vocal_actor
+DIR = Path.cwd() / 'experiment' / 'samples' / str("laughter_" + vocal_actor)
 
 file_name_core = "laughter-" + vocal_actor + "_" + "dist-" + effort_level
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
-slab.set_default_samplerate(48828)
+samplerate = 48828
+slab.set_default_samplerate(samplerate)
 config = get_config()
-proc_list = config['proc_list']
-freefield.initialize('dome', zbus=True, default='play_birec')
+freefield.initialize('dome', zbus=True, device=['RP2', 'RP2', 'D:/Projects/distance_perception/experiment/data/button_rec.rcx'])
 freefield.set_logger('WARNING')
 
-playbuflen = 50000
-silence = slab.Sound.silence(duration=playbuflen)
 
-freefield.write(tag="playbuflen", value=playbuflen, processors=["RX81", "RX82"])
-n_reps = 20
-
-for i in range(n_reps):
+ready_to_record = True
+counter = 0
+while ready_to_record:
+    print('hold button to start recording')
     while not freefield.read(tag="response", processor="RP2"):
         time.sleep(0.01)
     print("button was pressed")
-    rec_data = freefield.play_and_record(0, silence)
-    rec = slab.Binaural(rec_data)
-
-    if numpy.amax(rec.data) > 1:
-        print("Audio is clipping")
-    else:
-        file_name = file_name_core + "_trial-" + str(i + 1) + ".wav"
-        rec.write(DIR / file_name)
-        print("Done writing:", file_name)
+    start_time = time.time()
+    while freefield.read(tag="response", processor="RP2"):
+        time.sleep(0.1)
+    end_time = time.time()
+    rec_length = round((end_time - start_time) * samplerate)
+    rec_l = freefield.read(tag="data_l", processor="RP2", n_samples=rec_length)
+    rec_r = freefield.read(tag="data_r", processor="RP2", n_samples=rec_length)
+    rec = slab.Binaural([rec_l, rec_r])
+    # file_name = file_name_core + "_trial-" + str(counter + 1) + ".wav"
+    # rec.write(DIR / file_name)
+    # print("Done writing:", file_name)
+    ready_to_record = 'y' == input("Are you ready to record again? (y/n)")
+    counter += 1
