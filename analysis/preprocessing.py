@@ -49,7 +49,7 @@ def autoreject_epochs(epochs,
                       consensus=None,
                       cv=10,
                       thresh_method="bayesian optimization",
-                      j_jobs=1,
+                      n_jobs=1,
                       random_state=None):
     """
     Automatically reject epochs via AutoReject algorithm:
@@ -77,9 +77,9 @@ def autoreject_epochs(epochs,
                              edgecolor="r", facecolor="none")
     ax[1].add_patch(rect)
     ax[1].xaxis.set_ticks_position("bottom")
-    ax[1].set(xlabel=r"Consensus percentage $\kappa$"",
-              ylabel=r"Max sensors interpolated $\rho$"",
-              title="Mean cross validation error (x 1e6)"")
+    ax[1].set(xlabel=r"Consensus percentage $\kappa$",
+              ylabel=r"Max sensors interpolated $\rho$",
+              title="Mean cross validation error (x 1e6)")
     fig.colorbar(im)
     fig.tight_layout()
     fig.savefig(fig_folder / pathlib.Path("reject_epochs.pdf"), dpi=800)
@@ -130,8 +130,8 @@ if __name__ == "__main__":
     with open(DIR / "analysis" / "preproc_config.json") as file:
         cfg = json.load(file)
     # get pilot folder directories.
-    pilot_DIR = DIR / "analysis" / "data" / "pilot"
-    fig_path = DIR / "analysis" / "figures"
+    pilot_DIR = DIR / "analysis" / "data" / "pilot_laughter"
+    fig_path = DIR / "analysis" / "figures" / "laughter"
     # get subject ids
     ids = list(name for name in os.listdir(pilot_DIR)
                if os.path.isdir(os.path.join(pilot_DIR, name)))
