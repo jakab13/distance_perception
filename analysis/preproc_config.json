@@ -89,10 +89,15 @@
     "threshold": 0.75
   },
   "autoreject": {
-    "n_interpolate": [1, 4, 8, 16]
-  },
-  "reref": {
-    "type": "average",
-    "ref": null
-  }
+    "n_interpolate": [1, 4, 8, 16],
+    "cv": 10,
+    "thresh_method": "bayesian optimization",
+    "j_jobs": 1,
+    "random_state": null
+
+},
+"reref": {
+  "type": "average",
+  "ref": null
+}
 }
