@@ -126,12 +126,13 @@ def set_ref(epochs, type="average", ref=None, apply=True, j_jobs=-1):
 
 
 if __name__ == "__main__":
+    experiment = "noise"  # "laughter" or "noise"
     DIR = pathlib.Path(os.getcwd())
     with open(DIR / "analysis" / "preproc_config.json") as file:
         cfg = json.load(file)
     # get pilot folder directories.
-    pilot_DIR = DIR / "analysis" / "data" / "pilot_laughter"
-    fig_path = DIR / "analysis" / "figures" / "laughter"
+    pilot_DIR = DIR / "analysis" / "data" / f"pilot_{experiment}"
+    fig_path = DIR / "analysis" / "figures" / f"{experiment}"
     # get subject ids
     ids = list(name for name in os.listdir(pilot_DIR)
                if os.path.isdir(os.path.join(pilot_DIR, name)))
@@ -166,14 +167,14 @@ if __name__ == "__main__":
                         notch=cfg["filtering"]["notch"])
         events = mne.events_from_annotations(raw)[0]  # get events
         epochs = mne.Epochs(raw, events, tmin=cfg["epochs"]["tmin"], tmax=cfg["epochs"]["tmax"],
-                            event_id=cfg["epochs"]["event_id"], preload=True)
+                            event_id=cfg["epochs"][f"event_id_{experiment}"], preload=True)
         del raw  # del raw data to save working memory.
         # STEP 3: rereference epochs. Defaults to average.
         epochs = set_ref(
             epochs, type=cfg["reref"]["type"], ref=cfg["reref"]["ref"])
         # STEP 4: apply ICA for blink and saccade artifact rejection, save epochs.
         reference = mne.preprocessing.read_ica(fname=pathlib.Path(
-            os.getcwd()) / "analysis" / "ica_reference.fif")  # reference ICA containing blink and saccade components.
+            os.getcwd()) / "analysis" / "reference_ica.fif")  # reference ICA containing blink and saccade components.
         components = reference.labels_["blinks"]
         ica = ICA(n_components=cfg["ica"]["n_components"],
                   method=cfg["ica"]["method"])
@@ -193,7 +194,7 @@ if __name__ == "__main__":
             epochs_folder / pathlib.Path(id + "-epo.fif"), overwrite=True)
         # STEP 6: average epochs and write evokeds to a file.
         evokeds = [epochs_clean[condition].average()
-                   for condition in cfg["epochs"]["event_id"].keys()]
+                   for condition in cfg["epochs"][f"event_id_{experiment}"].keys()]
         mne.write_evokeds(evokeds_folder / pathlib.Path(id +
                           "-ave.fif"), evokeds, overwrite=True)
         # delete data to save working memory.
