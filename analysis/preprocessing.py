@@ -17,6 +17,7 @@ of every subject and preprocess until evoked responses. Single steps are explain
 below.
 """
 
+
 def filtering(raw, notch=None, highpass=None, lowpass=None):
     """
     Apply FIR filter to the raw dataset. Make a 2 by 2 plot with time
@@ -52,7 +53,7 @@ def autoreject_epochs(epochs,
                       random_state=None):
     """
     Automatically reject epochs via AutoReject algorithm:
-    Computation of sensor-wise peak-to-peak-amplitude threshold
+    Computation of sensor-wise peak-to-peak-amplitude thresholds
     via cross-validation.
     """
     ar = AutoReject(n_interpolate=n_interpolate)
@@ -175,18 +176,19 @@ if __name__ == "__main__":
             os.getcwd()) / "analysis" / "ica_reference.fif")  # reference ICA containing blink and saccade components.
         components = reference.labels_["blinks"]
         ica = ICA(n_components=cfg["ica"]["n_components"],
-                  method=cfg["ica"]["method"],
-                  random_state=97)
+                  method=cfg["ica"]["method"])
         ica.fit(epochs)
         for component in components:
             mne.preprocessing.corrmap([reference, ica], template=(0, components[component]),
                                       label="blinks", plot=False, threshold=cfg["ica"]["threshold"])
             ica.apply(epochs, exclude=ica.labels_["blinks"])  # apply ICA
+        # STEP 5: Apply AutoReject algorithm to reject bad epochs via channel-wise
+        # peak to peak ampltiude threshold estimation (cross-validation)
         epochs_clean = autoreject_epochs(
             epochs, n_interpolate=cfg["autoreject"]["n_interpolate"])
         epochs_clean.save(
             epochs_folder / pathlib.Path(id + "-epo.fif"), overwrite=True)
-        # STEP 5: average epochs and write evokeds to a file.
+        # STEP 6: average epochs and write evokeds to a file.
         evokeds = [epochs_clean[condition].average()
                    for condition in cfg["epochs"]["event_id"].keys()]
         mne.write_evokeds(evokeds_folder / pathlib.Path(id +
