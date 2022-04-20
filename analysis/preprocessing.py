@@ -87,7 +87,7 @@ def autoreject_epochs(epochs,
     return epochs
 
 
-def set_ref(epochs, type="average", ref=None, apply=True):
+def set_ref(epochs, type="average", ref=None, apply=True, j_jobs=-1):
     """
     Create a robust average reference by first interpolating the bad channels
     to exclude outliers. The reference is applied as a projection. Return
@@ -97,7 +97,7 @@ def set_ref(epochs, type="average", ref=None, apply=True):
     ref: string/list of strings. List of reference electrode names. Example: ["P09", "P08"]
     """
     if type == "average":
-        ransac = Ransac()
+        ransac = Ransac(n_jobs=j_jobs)  # optimize process speed
         epochs_tmp = epochs.copy()
         epochs_tmp = ransac.fit_transform(epochs)
         mne.set_eeg_reference(
@@ -185,7 +185,10 @@ if __name__ == "__main__":
         # STEP 5: Apply AutoReject algorithm to reject bad epochs via channel-wise
         # peak to peak ampltiude threshold estimation (cross-validation)
         epochs_clean = autoreject_epochs(
-            epochs, n_interpolate=cfg["autoreject"]["n_interpolate"])
+            epochs, n_interpolate=cfg["autoreject"]["n_interpolate"],
+            n_jobs=cfg["autoreject"]["n_jobs"],
+            cv=cfg["autoreject"]["cv"],
+            thresh_method=cfg["autoreject"]["thresh_method"])
         epochs_clean.save(
             epochs_folder / pathlib.Path(id + "-epo.fif"), overwrite=True)
         # STEP 6: average epochs and write evokeds to a file.
