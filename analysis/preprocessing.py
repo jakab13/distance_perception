@@ -9,9 +9,13 @@ import json
 
 plt.style.use(['seaborn-colorblind', 'seaborn-darkgrid'])
 
-# TODO:
-# 5. change filtering functionality to include quasi-perfect notch filter (zapline)
-
+# TODO: change and use filtering functionality to include quasi-perfect notch filter (zapline)
+# add more function arguments in every function and put into config file.
+"""
+Preprocessing pipeline. Execute whole code to iterate through BrainVision data
+of every subject and preprocess until evoked responses. Single steps are explained
+below.
+"""
 
 def filtering(raw, notch=None, highpass=None, lowpass=None):
     """
@@ -39,7 +43,13 @@ def filtering(raw, notch=None, highpass=None, lowpass=None):
     return raw
 
 
-def autoreject_epochs(epochs, n_interpolate=[1, 4, 8, 16]):
+def autoreject_epochs(epochs,
+                      n_interpolate=[1, 4, 8, 16],
+                      consensus=None,
+                      cv=10,
+                      thresh_method="bayesian optimization",
+                      j_jobs=1,
+                      random_state=None):
     """
     Automatically reject epochs via AutoReject algorithm:
     Computation of sensor-wise peak-to-peak-amplitude threshold
@@ -118,7 +128,7 @@ if __name__ == "__main__":
     DIR = pathlib.Path(os.getcwd())
     with open(DIR / "analysis" / "preproc_config.json") as file:
         cfg = json.load(file)
-    # get directory in which pilot folders are
+    # get pilot folder directories.
     pilot_DIR = DIR / "analysis" / "data" / "pilot"
     fig_path = DIR / "analysis" / "figures"
     # get subject ids
@@ -131,9 +141,9 @@ if __name__ == "__main__":
         raw_files = []
         for header_file in header_files:
             raw_files.append(mne.io.read_raw_brainvision(
-                header_file, preload=True))
+                header_file, preload=True))  # read BrainVision files.
         raw = mne.concatenate_raws(raw_files)  # make raw files
-        # make folders for different file types + preprocessing figures..
+        # make folders for different file types + preprocessing figures.
         epochs_folder = pilot_DIR / id / "epochs"
         raw_folder = pilot_DIR / id / "raw_data"
         fig_folder = fig_path / id
