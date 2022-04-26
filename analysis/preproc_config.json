@@ -95,7 +95,7 @@
   "ica": {
     "n_components": 0.999,
     "method": "fastica",
-    "threshold": 0.75
+    "threshold": "auto"
   },
   "autoreject": {
     "n_interpolate": [1, 4, 8, 16],
@@ -108,5 +108,8 @@
   "reref": {
     "type": "average",
     "ref": null
+  },
+  "montage": {
+    "name": "AS-96_REF.bvef"
   }
 }
