@@ -75,15 +75,16 @@ def autoreject_epochs(epochs,
                       consensus=None,
                       cv=10,
                       thresh_method="bayesian optimization",
-                      n_jobs=1,
+                      n_jobs=-1,
                       random_state=None):
     """
     Automatically reject epochs via AutoReject algorithm:
     Computation of sensor-wise peak-to-peak-amplitude thresholds
     via cross-validation.
     """
-    ar = AutoReject(n_interpolate=n_interpolate)
-    epochs = ar.fit_transform(epochs)
+    ar = AutoReject(n_interpolate=n_interpolate, n_jobs=n_jobs)
+    ar.fit(epochs[:50])
+    epochs_ar, reject_log = ar.transform(epochs, return_log=True)
     fig, ax = plt.subplots(2)
     # plotipyt histogram of rejection thresholds
     ax[0].set_title("Rejection Thresholds")
@@ -108,10 +109,20 @@ def autoreject_epochs(epochs,
               title="Mean cross validation error (x 1e6)")
     fig.colorbar(im)
     fig.tight_layout()
-    fig.savefig(fig_folder / pathlib.Path("reject_epochs.pdf"), dpi=800)
+    fig.savefig(fig_folder / pathlib.Path("autoreject_best_fit.pdf"), dpi=800)
     plt.close()
-    return epochs
-
+    evoked_bad = epochs[reject_log.bad_epochs].average()
+    snr_ar = snr(epochs_ar)
+    plt.plot(evoked_bad.times, evoked_bad.data.T * 1e06, 'r', zorder=-1)
+    epochs_ar.average().plot(axes=plt.gca(), show=False, titles=f"SNR: {snr_ar:.2f}")
+    plt.savefig(
+        fig_folder / pathlib.Path("autoreject_results.pdf"), dpi=800)
+    plt.close()
+    epochs_ar.plot_drop_log(show=False)
+    plt.savefig(
+        fig_folder / pathlib.Path("epochs_drop_log.pdf"), dpi=800)
+    plt.close()
+    return epochs_ar
 
 def set_ref(epochs, type="average", ref=None, apply=True, j_jobs=-1):
     """
