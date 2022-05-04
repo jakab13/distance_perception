@@ -199,6 +199,38 @@ def reref(epochs, type="average", n_jobs=-1):
         plt.close()
         return epochs
 
+def apply_ICA(epochs, reference, n_components=None, method="fastica",
+              threshold="auto", n_interpolate=None, n_jobs=-1):
+    """
+    Run AutoReject, fit ICA on bad epochs to only include eye movement contaminated
+    epochs plus noisy brain data. ICA works best when only "critical" data is
+    shown.
+    """
+    epochs_ica = epochs.copy()
+    snr_pre_ica = snr(epochs_ica)
+    ar = AutoReject(n_interpolate=n_interpolate, n_jobs=n_jobs)
+    ar.fit(epochs_ica[:50])
+    epochs_ar, reject_log = ar.transform(epochs_ica, return_log=True)
+    ica = ICA(n_components=n_components, method=method)
+    ica.fit(epochs_ica[~reject_log.bad_epochs])
+    # reference ICA containing blink and saccade components.
+    reference = mne.preprocessing.read_ica(fname=reference)
+    # .labels_ dict must contain "blinks" key with int values.
+    components = reference.labels_["blinks"]
+    for component in components:
+        mne.preprocessing.corrmap([reference, ica], template=(0, components[component]),
+                                  label="blinks", plot=False, threshold=cfg["ica"]["threshold"])
+        ica.apply(epochs_ica, exclude=ica.labels_["blinks"])  # apply ICA
+        ica.plot_components(ica.labels_["blinks"], show=False)
+        plt.savefig(fig_folder / pathlib.Path("ica_components.pdf"), dpi=800)
+        plt.close()
+    snr_post_ica = snr(epochs_ica)
+    ica.plot_overlay(epochs.average(), exclude=ica.labels_["blinks"],
+                     show=False, title=f"SNR: {snr_pre_ica:.2f} (before), {snr_post_ica:.2f} (after)")
+    plt.savefig(fig_folder / pathlib.Path("ICA_results.pdf"), dpi=800)
+    plt.close()
+    return epochs_ica
+
 
 if __name__ == "__main__":
     experiment = "noise"  # "laughter" or "noise"
