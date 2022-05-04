@@ -6,11 +6,14 @@ from matplotlib import pyplot as plt, patches
 from autoreject import AutoReject, Ransac
 from mne.preprocessing import ICA
 import json
+import glob
+from meegkit.dss import dss_line_iter
 
-plt.style.use(['seaborn-colorblind', 'seaborn-darkgrid'])
+# TODO: Implement notch filter in filtering function (zapline? Doesnt work ATM).
+# TODO: implement function to search for files in project folder.
+# TODO: make reref() more elegant.
+# TODO: test all references in reref().
 
-# TODO: change and use filtering functionality to include quasi-perfect notch filter (zapline)
-# add more function arguments in every function and put into config file.
 """
 Preprocessing pipeline. Execute whole code to iterate through BrainVision data
 of every subject and preprocess until evoked responses. Single steps are explained
@@ -233,7 +236,7 @@ def apply_ICA(epochs, reference, n_components=None, method="fastica",
 
 
 if __name__ == "__main__":
-    experiment = "noise"  # "laughter" or "noise"
+    experiment = "noise"  # "laughter" or "noise" pilot data.
     DIR = pathlib.Path(os.getcwd())
     with open(DIR / "analysis" / "preproc_config.json") as file:
         cfg = json.load(file)
@@ -262,41 +265,38 @@ if __name__ == "__main__":
                 os.makedirs(folder)
         # Use BrainVision mapping as channel names.
         raw.rename_channels(cfg["mapping"])
-        montage_path = pathlib.Path(os.getcwd()) / \
-            "analysis" / "AS-96_REF.bvef"  # Use BrainVision montage file to specify electrode positions.
+        # Use BrainVision montage file to specify electrode positions.
+        montage_path = DIR / "analysis" / cfg["montage"]["name"]
         montage = mne.channels.read_custom_montage(fname=montage_path)
         raw.set_montage(montage)
         raw.save(raw_folder / pathlib.Path(id + "_raw.fif"), overwrite=True)
-        # STEP 2: filter and epoch raw data.
+        # STEP 2: bandpass filter at 1 - 40 Hz and epoch raw data.
         raw = filtering(raw,
                         highpass=cfg["filtering"]["highpass"],
                         lowpass=cfg["filtering"]["lowpass"],
-                        notch=cfg["filtering"]["notch"])
+                        notch=cfg["filtering"]["notch"])  # bandpass filter
         events = mne.events_from_annotations(raw)[0]  # get events
         epochs = mne.Epochs(raw, events, tmin=cfg["epochs"]["tmin"], tmax=cfg["epochs"]["tmax"],
-                            event_id=cfg["epochs"][f"event_id_{experiment}"], preload=True)
+                            event_id=cfg["epochs"][f"event_id_{experiment}"], preload=True,
+                            baseline=cfg["epochs"]["baseline"], detrend=cfg["epochs"]["detrend"])  # apply baseline
         del raw  # del raw data to save working memory.
-        # STEP 3: rereference epochs. Defaults to average.
-        epochs = set_ref(
-            epochs, type=cfg["reref"]["type"], ref=cfg["reref"]["ref"])
-        # STEP 4: apply ICA for blink and saccade artifact rejection, save epochs.
-        reference = mne.preprocessing.read_ica(fname=pathlib.Path(
-            os.getcwd()) / "analysis" / "reference_ica.fif")  # reference ICA containing blink and saccade components.
-        components = reference.labels_["blinks"]
-        ica = ICA(n_components=cfg["ica"]["n_components"],
-                  method=cfg["ica"]["method"])
-        ica.fit(epochs)
-        for component in components:
-            mne.preprocessing.corrmap([reference, ica], template=(0, components[component]),
-                                      label="blinks", plot=False, threshold=cfg["ica"]["threshold"])
-            ica.apply(epochs, exclude=ica.labels_["blinks"])  # apply ICA
+        # STEP 3: rereference epochs.
+        epochs_ref = reref(
+            epochs, type=cfg["reref"]["type"])
+        # STEP 4: apply ICA for blink and saccade artifact rejection.
+        epochs_ica = apply_ICA(epochs_ref, reference=cfg["ica"]["reference"],
+                               n_components=cfg["ica"]["n_components"],
+                               threshold=cfg["ica"]["threshold"],
+                               n_interpolate=cfg["autoreject"]["n_interpolate"],
+                               n_jobs=cfg["autoreject"]["n_jobs"])
         # STEP 5: Apply AutoReject algorithm to reject bad epochs via channel-wise
-        # peak to peak ampltiude threshold estimation (cross-validation)
+        # peak to peak ampltiude threshold estimation (cross-validation).
         epochs_clean = autoreject_epochs(
-            epochs, n_interpolate=cfg["autoreject"]["n_interpolate"],
+            epochs_ica, n_interpolate=cfg["autoreject"]["n_interpolate"],
             n_jobs=cfg["autoreject"]["n_jobs"],
             cv=cfg["autoreject"]["cv"],
             thresh_method=cfg["autoreject"]["thresh_method"])
+        epochs_clean.apply_baseline((None, 0))
         epochs_clean.save(
             epochs_folder / pathlib.Path(id + "-epo.fif"), overwrite=True)
         # STEP 6: average epochs and write evokeds to a file.
@@ -305,4 +305,4 @@ if __name__ == "__main__":
         mne.write_evokeds(evokeds_folder / pathlib.Path(id +
                           "-ave.fif"), evokeds, overwrite=True)
         # delete data to save working memory.
-        del epochs, epochs_clean, ica, reference, components, evokeds
+        del epochs, epochs_ref, epochs_ica, epochs_clean, evokeds
