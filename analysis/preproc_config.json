@@ -68,7 +68,8 @@
   "filtering": {
     "highpass": 1,
     "lowpass": 40,
-    "notch": null
+    "notch": null,
+    "nfft": 400
   },
   "epochs": {
     "event_id_noise": {
@@ -89,13 +90,16 @@
       "vocal_effort/5": 6,
       "button_press": 7
     },
-    "tmin": -0.5,
-    "tmax": 1.5
+    "tmin": -0.2,
+    "tmax": 0.8,
+    "detrend": null,
+    "baseline": null
   },
   "ica": {
     "n_components": 0.999,
     "method": "fastica",
-    "threshold": "auto"
+    "threshold": 0.75,
+    "reference": "D:/Projects/distance_perception/analysis/reference_ica.fif"
   },
   "autoreject": {
     "n_interpolate": [1, 4, 8, 16],
@@ -103,11 +107,9 @@
     "thresh_method": "bayesian optimization",
     "n_jobs": -1,
     "random_state": null
-
   },
   "reref": {
-    "type": "average",
-    "ref": null
+    "type": "rest"
   },
   "montage": {
     "name": "AS-96_REF.bvef"
