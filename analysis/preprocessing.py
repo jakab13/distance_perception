@@ -28,31 +28,46 @@ def snr(epochs):
     noise_rms = np.sqrt(np.mean(noise**2))
     return signal_rms/noise_rms
 
-
-def filtering(raw, notch=None, highpass=None, lowpass=None):
+def filtering(data, notch=None, highpass=None, lowpass=None):
     """
     Apply FIR filter to the raw dataset. Make a 2 by 2 plot with time
     series data and power spectral density before and after.
     """
     fig, ax = plt.subplots(2, sharex=True, sharey=True)
     fig.suptitle("Power Spectral Density")
-    ax[0].set_title("before removing power line noise")
-    ax[1].set_title("after removing power line noise")
+    ax[0].set_title("before filtering")
+    ax[1].set_title("after filtering")
     ax[1].set(xlabel="Frequency (Hz)", ylabel="μV²/Hz (dB)")
     ax[0].set(xlabel="Frequency (Hz)", ylabel="μV²/Hz (dB)")
-    raw.plot_psd(average=True, area_mode=None, ax=ax[0], show=False)
-    if notch is not None:
-        raw.notch_filter(freqs=notch)
+    data.plot_psd(ax=ax[0], show=False)
+    if notch is not None:  # ZapLine Notch filter
+        X = data.get_data().T
+        # remove power line noise with the zapline algorithm
+        X, _ = dss_line_iter(X, fline=cfg["filtering"]["notch"],
+                             sfreq=data.info["sfreq"],
+                             nfft=cfg["filtering"]["nfft"])
+        data._data = X.T  # put the data back into variable
+        del X
     if lowpass is not None:
-        raw.filter(h_freq=lowpass, l_freq=None)
+        data.filter(h_freq=lowpass, l_freq=None)
     if highpass is not None:
-        raw.filter(h_freq=None, l_freq=highpass)
-    raw.plot_psd(average=True, area_mode=None, ax=ax[1], show=False)
+        data.filter(h_freq=None, l_freq=highpass)
+    data.plot_psd(ax=ax[1], show=False)
     fig.tight_layout()
-    fig.savefig(
-        fig_folder / pathlib.Path("remove_power_line_noise.pdf"), dpi=800)
+    if lowpass is not None and highpass == None:
+        fig.savefig(
+            fig_folder / pathlib.Path("lowpassfilter.pdf"), dpi=800)
+    if highpass is not None and lowpass == None:
+        fig.savefig(
+            fig_folder / pathlib.Path("highpassfilter.pdf"), dpi=800)
+    if highpass and lowpass is not None:
+        fig.savefig(
+            fig_folder / pathlib.Path("bandpassfilter.pdf"), dpi=800)
+    if notch is not None:
+        fig.savefig(
+            fig_folder / pathlib.Path("ZapLine_filter.pdf"), dpi=800)
     plt.close()
-    return raw
+    return data
 
 
 def autoreject_epochs(epochs,
