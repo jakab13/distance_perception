@@ -16,6 +16,17 @@ Preprocessing pipeline. Execute whole code to iterate through BrainVision data
 of every subject and preprocess until evoked responses. Single steps are explained
 below.
 """
+def snr(epochs):
+    """
+    Compute signal-to-noise ratio. Take root mean square of noise
+    (interval before stimulus onset) and signal (interval where evoked activity is expected)
+    and return quotient.
+    """
+    signal = epochs.copy().crop(0, 0.6).average().get_data()
+    noise = epochs.copy().crop(None, 0).average().get_data()
+    signal_rms = np.sqrt(np.mean(signal**2))
+    noise_rms = np.sqrt(np.mean(noise**2))
+    return signal_rms/noise_rms
 
 
 def filtering(raw, notch=None, highpass=None, lowpass=None):
