@@ -139,8 +139,9 @@ def reref(epochs, type="average", n_jobs=-1, n_resample=50, min_channels=0.25,
         ransac.fit(epochs_clean)
         epochs_clean.average().plot()
         bads = input("Sanity check for obvious bad sensors: ")
-        if bads not in ransac.bad_chs_:
-            ransac.bad_chs_.append(bads)
+        if len(bads) != 0:
+            if bads not in ransac.bad_chs_:
+                ransac.bad_chs_.append(bads)
         epochs_clean = ransac.transform(epochs_clean)
         evoked = epochs.average()
         evoked_clean = epochs_clean.average()
@@ -213,7 +214,7 @@ def apply_ICA(epochs, reference, n_components=None, method="fastica",
                                   label="blinks", plot=False, threshold=cfg["ica"]["threshold"])
         ica.apply(epochs_ica, exclude=ica.labels_["blinks"])  # apply ICA
         ica.plot_components(ica.labels_["blinks"], show=False)
-        plt.savefig(fig_folder / pathlib.Path("ica_components.pdf"), dpi=800)
+        plt.savefig(fig_folder / pathlib.Path(f"ica_components_{component}.pdf"), dpi=800)
         plt.close()
     snr_post_ica = snr(epochs_ica)
     ica.plot_overlay(epochs.average(), exclude=ica.labels_["blinks"],
