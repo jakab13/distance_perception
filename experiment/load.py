@@ -6,6 +6,8 @@ from os.path import isfile, join
 import random
 import string
 
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
 DIR = pathlib.Path(__file__).parent.absolute()
 
 
@@ -25,7 +27,7 @@ def load_control(sound_type):
 
 
 def load_deviant():
-    deviant_filepath = DIR / 'samples' / 'chirp' / 'a_weighted' / 'AW_A_chirp_control.wav'
+    deviant_filepath = DIR / 'samples' / 'chirp_room-10-30-3' / 'a_weighted' / 'AW_A_chirp_room-10-30-3_control.wav'
     deviant_sound = slab.Binaural(deviant_filepath)
     return deviant_sound
 
@@ -43,8 +45,11 @@ def load_sounds(sound_type):
     for file_name in file_names:
         file_path = a_weighted_filepath / file_name
         sound = slab.Binaural(file_path)
-        distance = file_name[file_name.find('dist-') + len('dist-'):file_name.rfind('.wav')]
-        loaded_sound_obj[sound_type][distance] = sound
+        distance = int(file_name[file_name.find('dist-') + len('dist-'):file_name.rfind('.wav')])
+        if distance not in loaded_sound_obj[sound_type]:
+            loaded_sound_obj[sound_type][distance] = [sound]
+        else:
+            loaded_sound_obj[sound_type][distance].append(sound)
 
     loaded_sound_obj[sound_type]['control'] = load_control(sound_type)
     loaded_sound_obj['deviant'] = load_deviant()

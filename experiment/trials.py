@@ -19,38 +19,23 @@ class Trials:
         self.sound_type = sound_type
         self.sounds = load_sounds(self.sound_type)
         self.playback_direction = "random"
-        self.record_response = True
-        self.jitter_distances = False
+        self.record_response = False
         self.trials = None
         self.correct_total = 0
         self.deviant_freq = None
         self.participant_id = participant_id
 
-    def get_distances(self, playback_direction):
-        distances = config['distances']['detailed']
+    def get_distance_groups(self, playback_direction, scale_type):
+        distance_groups = list(config['distance_groups'][scale_type])
         if playback_direction == 'away':
-            distances.sort()
-            self.trials = distances
-            self.deviant_freq = None
-            self.jitter_distances = False
+            distance_groups.sort()
+            self.trials = distance_groups
         elif playback_direction == 'toward':
-            distances.sort(reverse=True)
-            self.trials = distances
-            self.deviant_freq = None
-            self.jitter_distances = False
+            distance_groups.sort(reverse=True)
+            self.trials = distance_groups
         elif playback_direction == 'random':
-            distances = config['distances']['sparse']
-            self.jitter_distances = True
-            self.deviant_freq = None
-            self.record_response = True
             self.trials = None
-        return distances
-
-    @staticmethod
-    def jitter_distance(distance):
-        distance += random.uniform(-distance / 10, distance / 10)
-        distance = 20 * round(distance / 20)
-        return distance
+        return distance_groups
 
     @staticmethod
     def crop_sound(sound, isi):
@@ -67,9 +52,11 @@ class Trials:
         out = out.ramp(duration=0.01)
         return out
 
-    def get_sound_from_group(self, group_number):
-        distance = config['distances']['sparse'][group_number - 1]
-        sound = self.sounds[self.sound_type][str(distance)]
+    def get_sound_from_group(self, group_number, scale_type):
+        distances = config['distance_groups'][scale_type][group_number]
+        distance = random.choice(distances)
+        sounds = self.sounds[self.sound_type][distance]
+        sound = random.choice(sounds)
         return sound
 
     def load_to_buffer(self, sound, isi=2.0):
@@ -106,10 +93,10 @@ class Trials:
         while freefield.read(tag="playback", n_samples=1, processor="RP2"):
             time.sleep(0.01)
 
-    def run(self, playback_direction='random', record_response=True, n_reps=1, isi=1.5, level=75):
+    def run(self, playback_direction='random', scale_type='linear_10', record_response=False, n_reps=1, isi=1.5, level=75):
         self.record_response = record_response
         self.correct_total = 0
-        distance_groups = [1, 2, 3, 4, 5]
+        distance_groups = self.get_distance_groups(playback_direction, scale_type=scale_type)
         seq = slab.Trialsequence(conditions=distance_groups, trials=self.trials, n_reps=n_reps,
                                  deviant_freq=self.deviant_freq)
         for distance_group in seq:
@@ -117,7 +104,7 @@ class Trials:
                 stimulus = self.sounds['deviant']
                 stimulus.level = level - 10
             else:
-                stimulus = self.get_sound_from_group(distance_group)
+                stimulus = self.get_sound_from_group(distance_group, scale_type=scale_type)
                 stimulus.level = level
             print('Playing', self.sound_type, 'from group', distance_group)
             self.load_to_buffer(stimulus, isi)
