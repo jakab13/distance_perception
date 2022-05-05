@@ -1,35 +1,30 @@
-import os
-import pathlib
-import numpy as np
-import mne
-from matplotlib import pyplot as plt, patches
-from autoreject import AutoReject, Ransac
-from mne.preprocessing import ICA
-import json
-import glob
 from meegkit.dss import dss_line_iter
+import glob
+import json
+from mne.preprocessing import ICA
+from autoreject import AutoReject, Ransac
+from matplotlib import pyplot as plt, patches
+import mne
+import numpy as np
+import pathlib
+import os
 
-# TODO: Implement notch filter in filtering function (zapline? Doesnt work ATM).
+# TODO: fix notch filter in filtering function (zapline? Doesnt work ATM).
 # TODO: implement function to search for files in project folder.
-# TODO: make reref() more elegant.
-# TODO: test all references in reref().
 
-"""
-Preprocessing pipeline. Execute whole code to iterate through BrainVision data
-of every subject and preprocess until evoked responses. Single steps are explained
-below.
-"""
+
 def snr(epochs):
     """
     Compute signal-to-noise ratio. Take root mean square of noise
     (interval before stimulus onset) and signal (interval where evoked activity is expected)
     and return quotient.
     """
-    signal = epochs.copy().crop(0, 0.6).average().get_data()
+    signal = epochs.copy().crop(0, 0.3).average().get_data()
     noise = epochs.copy().crop(None, 0).average().get_data()
     signal_rms = np.sqrt(np.mean(signal**2))
     noise_rms = np.sqrt(np.mean(noise**2))
-    return signal_rms/noise_rms
+    return signal_rms / noise_rms
+
 
 def filtering(data, notch=None, highpass=None, lowpass=None):
     """
@@ -56,7 +51,6 @@ def filtering(data, notch=None, highpass=None, lowpass=None):
     if highpass is not None:
         data.filter(h_freq=None, l_freq=highpass)
     data.plot_psd(ax=ax[1], show=False)
-    fig.tight_layout()
     if lowpass is not None and highpass == None:
         fig.savefig(
             fig_folder / pathlib.Path("lowpassfilter.pdf"), dpi=800)
@@ -86,7 +80,7 @@ def autoreject_epochs(epochs,
     via cross-validation.
     """
     ar = AutoReject(n_interpolate=n_interpolate, n_jobs=n_jobs)
-    ar.fit(epochs[:50])
+    ar.fit(epochs)
     epochs_ar, reject_log = ar.transform(epochs, return_log=True)
     fig, ax = plt.subplots(2)
     # plotipyt histogram of rejection thresholds
@@ -117,7 +111,8 @@ def autoreject_epochs(epochs,
     evoked_bad = epochs[reject_log.bad_epochs].average()
     snr_ar = snr(epochs_ar)
     plt.plot(evoked_bad.times, evoked_bad.data.T * 1e06, 'r', zorder=-1)
-    epochs_ar.average().plot(axes=plt.gca(), show=False, titles=f"SNR: {snr_ar:.2f}")
+    epochs_ar.average().plot(axes=plt.gca(), show=False,
+                             titles=f"SNR: {snr_ar:.2f}")
     plt.savefig(
         fig_folder / pathlib.Path("autoreject_results.pdf"), dpi=800)
     plt.close()
@@ -195,7 +190,7 @@ def reref(epochs, type="average", n_jobs=-1, n_resample=50, min_channels=0.25,
 
 
 def apply_ICA(epochs, reference, n_components=None, method="fastica",
-              threshold="auto", n_interpolate=None, n_jobs=-1):
+              threshold="auto", n_interpolate=None):
     """
     Run AutoReject, fit ICA on bad epochs to only include eye movement contaminated
     epochs plus noisy brain data. ICA works best when only "critical" data is
@@ -203,11 +198,12 @@ def apply_ICA(epochs, reference, n_components=None, method="fastica",
     """
     epochs_ica = epochs.copy()
     snr_pre_ica = snr(epochs_ica)
-    ar = AutoReject(n_interpolate=n_interpolate, n_jobs=n_jobs)
-    ar.fit(epochs_ica[:50])
-    epochs_ar, reject_log = ar.transform(epochs_ica, return_log=True)
+    # ar = AutoReject(n_interpolate=n_interpolate, n_jobs=n_jobs)
+    # ar.fit(epochs_ica)
+    # epochs_ar, reject_log = ar.transform(epochs_ica, return_log=True)
     ica = ICA(n_components=n_components, method=method)
-    ica.fit(epochs_ica[~reject_log.bad_epochs])
+    # ica.fit(epochs_ica[~reject_log.bad_epochs])
+    ica.fit(epochs_ica)
     # reference ICA containing blink and saccade components.
     reference = mne.preprocessing.read_ica(fname=reference)
     # .labels_ dict must contain "blinks" key with int values.
@@ -232,6 +228,8 @@ if __name__ == "__main__":
     DIR = pathlib.Path(os.getcwd())
     with open(DIR / "analysis" / "preproc_config.json") as file:
         cfg = json.load(file)
+    with open(DIR / "analysis" / "mapping.json") as file:
+        mapping = json.load(file)
     # get pilot folder directories.
     pilot_DIR = DIR / "analysis" / "data" / f"pilot_{experiment}"
     fig_path = DIR / "analysis" / "figures" / f"{experiment}"
@@ -239,7 +237,7 @@ if __name__ == "__main__":
     ids = list(name for name in os.listdir(pilot_DIR)
                if os.path.isdir(os.path.join(pilot_DIR, name)))
     # STEP 1: make raw.fif files and save them into raw_folder.
-    for id in ids:  # Iterate through subjects.
+    for id in ids[1:]:  # Iterate through subjects.
         folder_path = pilot_DIR / id
         header_files = folder_path.glob("*.vhdr")
         raw_files = []
@@ -256,7 +254,7 @@ if __name__ == "__main__":
             if not os.path.isdir(folder):
                 os.makedirs(folder)
         # Use BrainVision mapping as channel names.
-        raw.rename_channels(cfg["mapping"])
+        raw.rename_channels(mapping)
         # Use BrainVision montage file to specify electrode positions.
         montage_path = DIR / "analysis" / cfg["montage"]["name"]
         montage = mne.channels.read_custom_montage(fname=montage_path)
@@ -274,13 +272,17 @@ if __name__ == "__main__":
         del raw  # del raw data to save working memory.
         # STEP 3: rereference epochs.
         epochs_ref = reref(
-            epochs, type=cfg["reref"]["type"])
+            epochs, type=cfg["reref"]["type"], n_jobs=cfg["reref"]["ransac"]["n_jobs"],
+            n_resample=cfg["reref"]["ransac"]["n_resample"],
+            min_channels=cfg["reref"]["ransac"]["min_channels"],
+            min_corr=cfg["reref"]["ransac"]["min_corr"],
+            unbroken_time=cfg["reref"]["ransac"]["unbroken_time"],
+            plot=cfg["reref"]["plot"])
         # STEP 4: apply ICA for blink and saccade artifact rejection.
         epochs_ica = apply_ICA(epochs_ref, reference=cfg["ica"]["reference"],
                                n_components=cfg["ica"]["n_components"],
                                threshold=cfg["ica"]["threshold"],
-                               n_interpolate=cfg["autoreject"]["n_interpolate"],
-                               n_jobs=cfg["autoreject"]["n_jobs"])
+                               method=cfg["ica"]["method"])
         # STEP 5: Apply AutoReject algorithm to reject bad epochs via channel-wise
         # peak to peak ampltiude threshold estimation (cross-validation).
         epochs_clean = autoreject_epochs(
@@ -289,6 +291,11 @@ if __name__ == "__main__":
             cv=cfg["autoreject"]["cv"],
             thresh_method=cfg["autoreject"]["thresh_method"])
         epochs_clean.apply_baseline((None, 0))
+        epochs_clean.average().plot_image(
+            titles=f"SNR:{snr(epochs_clean):.2f}", show=False)
+        plt.savefig(
+            fig_folder / pathlib.Path("clean_evoked_image.pdf"), dpi=800)
+        plt.close()
         epochs_clean.save(
             epochs_folder / pathlib.Path(id + "-epo.fif"), overwrite=True)
         # STEP 6: average epochs and write evokeds to a file.
