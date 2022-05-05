@@ -127,80 +127,72 @@ def autoreject_epochs(epochs,
     plt.close()
     return epochs_ar
 
-def reref(epochs, type="average", n_jobs=-1):
+
+def reref(epochs, type="average", n_jobs=-1, n_resample=50, min_channels=0.25,
+          min_corr=0.75, unbroken_time=0.4, plot=True):
     """
     If type "average": Create a robust average reference by first interpolating the bad channels
-    to exclude outliers.
-    If type "rest": use reference electrode standardization technique(point at infinity)
+    to exclude outliers. Take mean voltage over all inlier channels as reference.
+    If type "rest": use reference electrode standardization technique (point at infinity).
     epochs: mne.Epoch object.
-    type: string --> "average", "rest", "mastoids"
-    ref: string/list of strings. List of reference electrode names. Example: ["P9", "P10"]
+    type: string --> "average", "rest", "lm" (linked mastoids)
     """
     if type == "average":
         epochs_clean = epochs.copy()
-        ransac = Ransac(n_jobs=n_jobs)  # optimize speed
-        epochs_clean = ransac.fit_transform(epochs_clean)
-        epochs_clean.info["bads"] = ransac.bad_chs_
-        epochs_clean.set_eeg_reference(ref_channels="average", projection=True)
-        evoked = epochs.average()  # for plotting
+        ransac = Ransac(n_jobs=n_jobs, n_resample=n_resample, min_channels=min_channels,
+                        min_corr=min_corr, unbroken_time=unbroken_time)  # optimize speed
+        ransac.fit(epochs_clean)
+        epochs_clean.average().plot()
+        bads = input("Sanity check for obvious bad sensors: ")
+        if bads not in ransac.bad_chs_:
+            ransac.bad_chs_.append(bads)
+        epochs_clean = ransac.transform(epochs_clean)
+        evoked = epochs.average()
         evoked_clean = epochs_clean.average()
-        evoked.info["bads"] = ransac.bad_chs_
-        average_reference = epochs_clean.info["projs"]
-        epochs_clean.add_proj(average_reference)
-        epochs_clean.apply_proj()
+        evoked.info['bads'] = ransac.bad_chs_
+        evoked_clean.info['bads'] = ransac.bad_chs_
         fig, ax = plt.subplots(2)
         evoked.plot(exclude=[], axes=ax[0], show=False)
-        ax[0].set_title('Before RANSAC')
         evoked_clean.plot(exclude=[], axes=ax[1], show=False)
+        ax[0].set_title(f"Before RANSAC (bad chs:{ransac.bad_chs_})")
         ax[1].set_title("After RANSAC")
         fig.tight_layout()
         fig.savefig(
             fig_folder / pathlib.Path("RANSAC_results.pdf"), dpi=800)
         plt.close()
+        epochs = epochs_clean.copy()
+        epochs_clean.set_eeg_reference(ref_channels="average", projection=True)
+        average_reference = epochs_clean.info["projs"]
+        epochs_clean.add_proj(average_reference)
+        epochs_clean.apply_proj()
         snr_pre = snr(epochs)
         snr_post = snr(epochs_clean)
-        epochs.average().plot(axes=ax[0], show=False)
-        ax[0].set_title(f"Original, SNR={snr_pre:.2f}")
-        epochs_clean.average().plot(axes=ax[1], show=False)
-        ax[1].set_title(f"AVG, SNR={snr_post:.2f}")
-        fig.tight_layout()
-        fig.savefig(
-            fig_folder / pathlib.Path("AVG_reference.pdf"), dpi=800)
-        plt.close()
-        return epochs_clean
+        epochs_reref = epochs_clean.copy()
     if type == "rest":
         sphere = mne.make_sphere_model("auto", "auto", epochs.info)
         src = mne.setup_volume_source_space(
             sphere=sphere, exclude=30., pos=5.)
         forward = mne.make_forward_solution(
             epochs.info, trans=None, src=src, bem=sphere)
-        epochs_rest = epochs.copy().set_eeg_reference("REST", forward=forward)
-        fig, ax = plt.subplots(2)
+        epochs_reref = epochs.copy().set_eeg_reference("REST", forward=forward)
         snr_pre = snr(epochs)
-        snr_post = snr(epochs_rest)
+        snr_post = snr(epochs_reref)
+    if type == "lm":
+        epochs_reref = epochs.copy().set_eeg_reference(["TP9", "TP10"])
+        snr_pre = snr(epochs)
+        snr_post = snr(epochs_reref)
+    if plot == True:
+        fig, ax = plt.subplots(2)
         epochs.average().plot(axes=ax[0], show=False)
-        ax[0].set_title(f"Original, SNR={snr_pre:.2f}")
-        epochs_rest.average().plot(axes=ax[1], show=False)
-        ax[1].set_title(f"REST, SNR={snr_post:.2f}")
+        epochs_reref.average().plot(axes=ax[1], show=False)
+        ax[0].set_title(f"FCz, SNR={snr_pre:.2f}")
+        ax[1].set_title(f"{type}, SNR={snr_post:.2f}")
         fig.tight_layout()
         fig.savefig(
-            fig_folder / pathlib.Path("REST_reference.pdf"), dpi=800)
+            fig_folder / pathlib.Path(f"{type}_reference.pdf"), dpi=800)
         plt.close()
-        return epochs_rest
-    if type == "mastoids":
-        epochs_ref = epochs.copy().set_eeg_reference(["TP9", "TP10"])
-        fig, ax = plt.subplots(2)
-        snr_pre = snr(epochs)
-        snr_post = snr(epochs_ref)
-        epochs.average().plot(axes=ax[0], show=False)
-        ax[0].set_title(f"Original, SNR={snr_pre:.2f}")
-        epochs_ref.average().plot(axes=ax[1], show=False)
-        ax[1].set_title(f"Mastoids, SNR={snr_post:.2f}")
-        fig.tight_layout()
-        fig.savefig(
-            fig_folder / pathlib.Path("mastoids_reference.pdf"), dpi=800)
-        plt.close()
-        return epochs
+    return epochs_reref
+
 
 def apply_ICA(epochs, reference, n_components=None, method="fastica",
               threshold="auto", n_interpolate=None, n_jobs=-1):
