@@ -18,12 +18,18 @@ def generate_id():
     return participant_id
 
 
-def load_control(sound_type):
+def load_controls(sound_type):
     a_weighted_filepath = DIR / 'samples' / sound_type / 'a_weighted'
-    control_file_name = 'AW_A_' + sound_type + '_control.wav'
-    control_file_path = a_weighted_filepath / control_file_name
-    control_sound = slab.Binaural(control_file_path)
-    return control_sound
+    file_names = [f for f in listdir(a_weighted_filepath)
+                  if isfile(join(a_weighted_filepath, f))
+                  and not f.startswith('.')
+                  and f.endswith('control.wav')]
+    control_sounds = []
+    for file_name in file_names:
+        control_file_path = a_weighted_filepath / file_name
+        control_sound = slab.Binaural(control_file_path)
+        control_sounds.append(control_sound)
+    return control_sounds
 
 
 def load_deviant():
@@ -51,6 +57,6 @@ def load_sounds(sound_type):
         else:
             loaded_sound_obj[sound_type][distance].append(sound)
 
-    loaded_sound_obj[sound_type]['control'] = load_control(sound_type)
+    loaded_sound_obj[sound_type]['controls'] = load_controls(sound_type)
     loaded_sound_obj['deviant'] = load_deviant()
     return loaded_sound_obj

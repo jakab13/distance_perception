@@ -57,7 +57,7 @@ class Trials:
         distance = random.choice(distances)
         sounds = self.sounds[self.sound_type][distance]
         sound = random.choice(sounds)
-        return sound
+        return sound, distance
 
     def load_to_buffer(self, sound, isi=2.0):
         out = self.crop_sound(sound, isi)
@@ -104,9 +104,9 @@ class Trials:
                 stimulus = self.sounds['deviant']
                 stimulus.level = level - 10
             else:
-                stimulus = self.get_sound_from_group(distance_group, scale_type=scale_type)
+                stimulus, distance = self.get_sound_from_group(distance_group, scale_type=scale_type)
                 stimulus.level = level
-            print('Playing', self.sound_type, 'from group', distance_group)
+            print('Playing from distance', str(distance/100) + 'm', 'from group', distance_group)
             self.load_to_buffer(stimulus, isi)
             freefield.play()
             if not self.record_response:
@@ -119,7 +119,8 @@ class Trials:
             print("Saved participant responses")
 
     def play_control(self):
-        control_sound = self.sounds[self.sound_type]['control']
+        control_sounds = self.sounds[self.sound_type]['controls']
+        control_sound = random.choice(control_sounds)
         self.load_to_buffer(control_sound)
         freefield.play()
 
