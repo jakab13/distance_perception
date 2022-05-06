@@ -137,11 +137,11 @@ def reref(epochs, type="average", n_jobs=-1, n_resample=50, min_channels=0.25,
         ransac = Ransac(n_jobs=n_jobs, n_resample=n_resample, min_channels=min_channels,
                         min_corr=min_corr, unbroken_time=unbroken_time)  # optimize speed
         ransac.fit(epochs_clean)
-        epochs_clean.average().plot()
-        bads = input("Sanity check for obvious bad sensors: ")
+        epochs_clean.average().plot(exclude=[])
+        bads = input("Sanity check for obvious bad sensors: ").split()
         if len(bads) != 0:
             if bads not in ransac.bad_chs_:
-                ransac.bad_chs_.append(bads)
+                ransac.bad_chs_.extend(bads)
         epochs_clean = ransac.transform(epochs_clean)
         evoked = epochs.average()
         evoked_clean = epochs_clean.average()
@@ -214,7 +214,7 @@ def apply_ICA(epochs, reference, n_components=None, method="fastica",
                                   label="blinks", plot=False, threshold=cfg["ica"]["threshold"])
         ica.apply(epochs_ica, exclude=ica.labels_["blinks"])  # apply ICA
         ica.plot_components(ica.labels_["blinks"], show=False)
-        plt.savefig(fig_folder / pathlib.Path(f"ica_components_{component}.pdf"), dpi=800)
+        plt.savefig(fig_folder / pathlib.Path("ica_components.pdf"), dpi=800)
         plt.close()
     snr_post_ica = snr(epochs_ica)
     ica.plot_overlay(epochs.average(), exclude=ica.labels_["blinks"],
@@ -238,7 +238,7 @@ if __name__ == "__main__":
     ids = list(name for name in os.listdir(pilot_DIR)
                if os.path.isdir(os.path.join(pilot_DIR, name)))
     # STEP 1: make raw.fif files and save them into raw_folder.
-    for id in ids[1:]:  # Iterate through subjects.
+    for id in ids[3:]:  # Iterate through subjects.
         folder_path = pilot_DIR / id
         header_files = folder_path.glob("*.vhdr")
         raw_files = []
