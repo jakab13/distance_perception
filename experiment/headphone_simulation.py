@@ -84,3 +84,39 @@ for idx, stimulus in enumerate(stimuli):
         stimuli[idx] = slab.Binaural([left, right])
     stimuli[idx] = stimuli[idx].ramp(duration=0.02)
 
+seq = slab.Trialsequence(conditions=[1, 2, 3, 4, 5], n_reps=n_reps, deviant_freq=0.1)
+for stimulus_id in seq:
+    print(stimulus_id)
+    sound = stimuli[stimulus_id]
+    if stimulus_id == 1 or stimulus_id == 0:
+        sound.level = level - 5
+    else:
+        sound.level = level
+    sound_filename = sound_filenames[stimulus_id - 1]
+    # set trigger codes for EEG
+    if stimulus_id == 0:
+        # deviant
+        trig_value = 1
+        sound_filename = 'deviant'
+    elif stimulus_id == 1:
+        # control
+        trig_value = 2
+    elif stimulus_id == 2:
+        trig_value = 3
+    elif stimulus_id == 3:
+        trig_value = 4
+    elif stimulus_id == 4:
+        trig_value = 5
+    elif stimulus_id == 5:
+        trig_value = 6
+    freefield.write(tag='trigcode', value=trig_value, processors='RX82')
+    # Initialise attributes and data in the .rcx files
+    freefield.write(tag="playbuflen", value=playbuflen, processors="RP2")
+    freefield.write(tag="data_l", value=sound.left.data.flatten(), processors="RP2")
+    freefield.write(tag="data_r", value=sound.right.data.flatten(), processors="RP2")
+    # Playback sound and record participant interaction
+    print("playing trial:", seq.this_n, "file:", sound_filename)
+    freefield.play()
+    button_trig(7)
+
+

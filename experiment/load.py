@@ -48,6 +48,7 @@ def load_sounds(sound_type):
                   if isfile(join(a_weighted_filepath, f))
                   and not f.startswith('.')
                   and not f.endswith('control.wav')]
+    file_names.sort()
     for file_name in file_names:
         file_path = a_weighted_filepath / file_name
         sound = slab.Binaural(file_path)
@@ -58,5 +59,5 @@ def load_sounds(sound_type):
             loaded_sound_obj[sound_type][distance].append(sound)
 
     loaded_sound_obj[sound_type]['controls'] = load_controls(sound_type)
-    loaded_sound_obj['deviant'] = load_deviant()
+    loaded_sound_obj[sound_type][0] = [load_deviant()]
     return loaded_sound_obj

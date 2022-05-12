@@ -1,4 +1,5 @@
 import pathlib
+import numpy
 
 DIR = pathlib.Path(__file__).parent.absolute()
 
@@ -21,11 +22,11 @@ def get_config():
             9: [1920]
         },
         'linear_5': {
-            1: [20],
-            2: [80, 100],
-            3: [600, 620, 640],
-            4: [1200, 1220, 1240],
-            5: [1940, 1960, 1980, 2000]
+            1: numpy.arange(20, 80, 20),
+            2: numpy.arange(500, 580, 20),
+            3: numpy.arange(980, 1060, 20),
+            4: numpy.arange(1460, 1540, 20),
+            5: numpy.arange(1940, 2020, 20)
         },
         'log_10': {
             1: [20, 40],
@@ -40,11 +41,18 @@ def get_config():
             10: [2460, 2480, 2500]
         },
         'log_5': {
-            '1': [20],
-            '2': [40],
-            '3': [80],
-            '4': [160],
-            '5': [320, 340, 360]
+            1: numpy.arange(20, 80, 20),
+            2: numpy.arange(380, 440, 20),
+            3: numpy.arange(780, 840, 20),
+            4: numpy.arange(1180, 1240, 20),
+            5: numpy.arange(1580, 1580, 20)
+        },
+        'log_5_full': {
+            1: numpy.arange(20, 60, 20),
+            2: numpy.arange(200, 280, 20),
+            3: numpy.arange(780, 860, 20),
+            4: numpy.arange(1360, 1440, 20),
+            5: numpy.arange(1940, 2020, 20)
         },
         'vocal_effort': {
             '1': ['dis1'],
