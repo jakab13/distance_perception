@@ -55,11 +55,11 @@ def get_config():
             5: numpy.arange(1940, 2020, 20)
         },
         'vocal_effort': {
-            '1': ['dis1'],
-            '2': ['dis2'],
-            '3': ['dis3'],
-            '4': ['dis4'],
-            '5': ['dis5']
+            1: [1],
+            2: [2],
+            3: [3],
+            4: [4],
+            5: [5]
         }
     }
     config_obj['proc_list'] = proc_list

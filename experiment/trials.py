@@ -1,6 +1,7 @@
 import slab
 import freefield
 import copy
+import pathlib
 import numpy
 import time
 import random
@@ -8,6 +9,7 @@ from experiment.config import get_config
 from experiment.load import load_sounds
 
 slab.set_default_samplerate(44100)
+DIR = pathlib.Path(__file__).parent.absolute()
 
 
 class Trials:
@@ -56,11 +58,10 @@ class Trials:
         else:
             distances = self.config['distance_groups'][scale_type][group_number]
             distance = random.choice(distances)
-        sounds = self.sounds[self.sound_type][distance]
-        sound = random.choice(sounds) if sound_id == 'random' else sounds[sound_id]
+        sound = self.sounds[self.sound_type][distance].random_choice()[0]
         return sound, distance
 
-    def load_to_buffer(self, sound, isi=1.5):
+    def load_to_buffer(self, sound, isi=1.0):
         out = self.crop_sound(sound, isi)
         isi = slab.Sound.in_samples(isi, out.samplerate)
         isi = max(out.n_samples, isi)
@@ -77,10 +78,8 @@ class Trials:
         curr_response = int(freefield.read(tag="response", processor="RP2"))
         if curr_response != 0:
             reaction_time = int(round(time.time() - start_time, 3) * 1000)
-            response = int(numpy.log2(curr_response)) + 1
+            response = int(numpy.log2(curr_response))
             # response for deviant stimulus is reset to 0
-            if response == 5:
-                response = 0
         is_correct = response == seq.trials[seq.this_n]
         if is_correct:
             self.correct_total += 1
@@ -90,7 +89,7 @@ class Trials:
                           'correct_total': self.correct_total,
                           'rt': reaction_time})
         print('[Response ' + str(response) + ']',
-              '(Correct ' + str(self.correct_total) + '/' + str(seq.this_n + 1) + ')')
+              '(Correct ' + str(self.correct_total) + '/' + str(seq.n_trials) + ')')
         while freefield.read(tag="playback", n_samples=1, processor="RP2"):
             time.sleep(0.01)
 
@@ -107,17 +106,21 @@ class Trials:
             time.sleep(0.01)
             prev_response = curr_response
 
-    def run(self, run_type='training', playback_direction='random', scale_type='log_5_full', sound_id='random', record_response=False, n_reps=1, isi=1.5, level=75):
+    def run(self, run_type='trials', playback_direction='random', scale_type='log_5_full', sound_id='random',
+            record_response=False, save_trials=True, n_reps=1, isi=1.0, level=75):
+        results_folder = DIR / 'results'
+        results_file = slab.ResultsFile(subject=self.participant_id, folder=results_folder)
         self.correct_total = 0
         self.load_config()
-        deviant_freq = None if run_type == 'training' else 0.1
+        scale_type = 'vocal_effort' if 'vocalist' in self.sound_type else scale_type
+        deviant_freq = 0.1 if run_type == 'experiment' else None
         distance_groups = self.get_distance_groups(playback_direction, scale_type=scale_type)
         seq = slab.Trialsequence(conditions=distance_groups, trials=self.trials, n_reps=n_reps,
                                  deviant_freq=deviant_freq)
         for distance_group in seq:
             stimulus, distance = self.get_sound_from_group(distance_group, scale_type=scale_type, sound_id=sound_id)
             stimulus.level = level
-            print('Playing from distance', str(distance/100) + 'm', 'from group', distance_group)
+            print('Playing from group', distance_group, '(' + str(seq.this_n) + '/' + str(seq.n_trials) + ')')
             self.load_to_buffer(stimulus, isi)
             trig_value = distance_group if distance_group != 0 else 6
             freefield.write(tag='trigcode', value=trig_value, processors='RX82')
@@ -128,11 +131,9 @@ class Trials:
                 freefield.wait_to_finish_playing(proc="RP2", tag="playback")
             if record_response:
                 self.collect_responses(seq)
-        if record_response:
-            seq.save_json("responses/" + "participant-" + self.participant_id +
-                          "_training-" + self.sound_type + "_" + str(int(time.time())) + ".json")
+        if save_trials:
+            results_file.write(seq, tag='sequence')
             print("Saved participant responses")
-
 
     def play_control(self, sound_id='random'):
         control_sounds = self.sounds[self.sound_type]['controls']
