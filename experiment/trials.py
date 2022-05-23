@@ -106,14 +106,14 @@ class Trials:
             time.sleep(0.01)
             prev_response = curr_response
 
-    def run(self, run_type='trials', playback_direction='random', scale_type='log_5_full', sound_id='random',
+    def run(self, stage='training', playback_direction='random', scale_type='log_5_full', sound_id='random',
             record_response=False, save_trials=True, n_reps=1, isi=1.2, level=75):
-        results_folder = DIR / 'results'
-        results_file = slab.ResultsFile(subject=self.participant_id, folder=results_folder)
+        results_folder = DIR / 'results' / 'vocal_effort'
+        results_file = slab.ResultsFile(subject=self.participant_id, folder=results_folder, filename=stage)
         self.correct_total = 0
         self.load_config()
         scale_type = 'vocal_effort' if 'vocalist' in self.sound_type else scale_type
-        deviant_freq = 0.1 if run_type == 'experiment' else None
+        deviant_freq = 0.1 if stage == 'experiment' else None
         distance_groups = self.get_distance_groups(playback_direction, scale_type=scale_type)
         seq = slab.Trialsequence(conditions=distance_groups, trials=self.trials, n_reps=n_reps,
                                  deviant_freq=deviant_freq)
@@ -125,7 +125,7 @@ class Trials:
             trig_value = distance_group if distance_group != 0 else 6
             freefield.write(tag='trigcode', value=trig_value, processors='RX82')
             freefield.play()
-            if run_type == 'experiment':
+            if stage == 'experiment':
                 self.button_trig(7)
             if not record_response:
                 freefield.wait_to_finish_playing(proc="RP2", tag="playback")
