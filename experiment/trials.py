@@ -69,7 +69,7 @@ class Trials:
         freefield.write(tag="data_l", value=out.left.data.flatten(), processors="RP2")
         freefield.write(tag="data_r", value=out.right.data.flatten(), processors="RP2")
 
-    def collect_responses(self, seq):
+    def collect_responses(self, seq, results_file):
         response = None
         reaction_time = None
         start_time = time.time()
@@ -83,11 +83,11 @@ class Trials:
         is_correct = response == seq.trials[seq.this_n]
         if is_correct:
             self.correct_total += 1
-        seq.add_response({'solution': seq.trials[seq.this_n],
-                          'response': response,
-                          'isCorrect': is_correct,
-                          'correct_total': self.correct_total,
-                          'rt': reaction_time})
+        results_file.write(seq.trials[seq.this_n], tag='solution')
+        results_file.write(response, tag='response')
+        results_file.write(is_correct, tag='is_correct')
+        results_file.write(self.correct_total, tag='correct_total')
+        results_file.write(reaction_time, tag='reaction_time')
         print('[Response ' + str(response) + ']',
               '(Correct ' + str(self.correct_total) + '/' + str(seq.n_trials) + ')')
         while freefield.read(tag="playback", n_samples=1, processor="RP2"):
@@ -130,7 +130,7 @@ class Trials:
             if not record_response:
                 freefield.wait_to_finish_playing(proc="RP2", tag="playback")
             if record_response:
-                self.collect_responses(seq)
+                self.collect_responses(seq, results_file)
         if save_trials:
             results_file.write(seq, tag='sequence')
             print("Saved participant responses")

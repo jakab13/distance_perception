@@ -14,7 +14,7 @@ vocalist = Trials(sound_type="vocalist-2", participant_id=participant_id)
 vocalist.run(run_type='training', playback_direction='away')
 vocalist.run(run_type='training', playback_direction='toward')
 
-vocalist.run(run_type='test', n_reps=4, record_response=True)
+vocalist.run(run_type='test', n_reps=2, record_response=True)
 
 vocalist.play_deviant()
 
