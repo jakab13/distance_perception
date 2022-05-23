@@ -61,7 +61,7 @@ class Trials:
         sound = self.sounds[self.sound_type][distance].random_choice()[0]
         return sound, distance
 
-    def load_to_buffer(self, sound, isi=1.0):
+    def load_to_buffer(self, sound, isi=1.2):
         out = self.crop_sound(sound, isi)
         isi = slab.Sound.in_samples(isi, out.samplerate)
         isi = max(out.n_samples, isi)
@@ -107,7 +107,7 @@ class Trials:
             prev_response = curr_response
 
     def run(self, run_type='trials', playback_direction='random', scale_type='log_5_full', sound_id='random',
-            record_response=False, save_trials=True, n_reps=1, isi=1.0, level=75):
+            record_response=False, save_trials=True, n_reps=1, isi=1.2, level=75):
         results_folder = DIR / 'results'
         results_file = slab.ResultsFile(subject=self.participant_id, folder=results_folder)
         self.correct_total = 0
