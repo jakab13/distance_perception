@@ -11,7 +11,8 @@ import os
 
 # TODO: fix notch filter in filtering function (zapline? Doesnt work ATM).
 # TODO: implement function to search for files in project folder.
-
+# TODO: implement other way to calculate SNR. Maybe ask Alessandro?
+# TODO: fix autoreject_epochs (AR results plot does not work)
 
 def snr(epochs):
     """
@@ -19,7 +20,7 @@ def snr(epochs):
     (interval before stimulus onset) and signal (interval where evoked activity is expected)
     and return quotient.
     """
-    signal = epochs.copy().crop(0, 0.3).average().get_data()
+    signal = epochs.copy().crop(0, 0.4).average().get_data()
     noise = epochs.copy().crop(None, 0).average().get_data()
     signal_rms = np.sqrt(np.mean(signal**2))
     noise_rms = np.sqrt(np.mean(noise**2))
@@ -193,9 +194,9 @@ def reref(epochs, type="average", n_jobs=-1, n_resample=50, min_channels=0.25,
 def apply_ICA(epochs, reference, n_components=None, method="fastica",
               threshold="auto", n_interpolate=None):
     """
-    Run AutoReject, fit ICA on bad epochs to only include eye movement contaminated
-    epochs plus noisy brain data. ICA works best when only "critical" data is
-    shown.
+    Run independent component analysis. Fit all epochs to the mne.ICA class, use
+    reference_ica.fif to show the algorithm how blinks and saccades look like.
+    Apply ica and save components to keep track of the excluded component topography.
     """
     epochs_ica = epochs.copy()
     snr_pre_ica = snr(epochs_ica)
@@ -213,9 +214,12 @@ def apply_ICA(epochs, reference, n_components=None, method="fastica",
         mne.preprocessing.corrmap([reference, ica], template=(0, components[component]),
                                   label="blinks", plot=False, threshold=cfg["ica"]["threshold"])
         ica.apply(epochs_ica, exclude=ica.labels_["blinks"])  # apply ICA
-        ica.plot_components(ica.labels_["blinks"], show=False)
-        plt.savefig(fig_folder / pathlib.Path("ica_components.pdf"), dpi=800)
-        plt.close()
+    ica.plot_components(ica.labels_["blinks"], show=False)
+    plt.savefig(fig_folder / pathlib.Path("ICA_components.pdf"), dpi=800)
+    plt.close()
+    ica.plot_sources(inst=epochs, show=False, start=0, stop=10, show_scrollbars=False)
+    plt.savefig(fig_folder / pathlib.Path(f"ICA_sources.pdf"), dpi=800)
+    plt.close()
     snr_post_ica = snr(epochs_ica)
     ica.plot_overlay(epochs.average(), exclude=ica.labels_["blinks"],
                      show=False, title=f"SNR: {snr_pre_ica:.2f} (before), {snr_post_ica:.2f} (after)")
@@ -225,7 +229,7 @@ def apply_ICA(epochs, reference, n_components=None, method="fastica",
 
 
 if __name__ == "__main__":
-    experiment = "noise"  # "laughter" or "noise" pilot data.
+    experiment = "ve"  # "ve" or "noise" pilot data.
     DIR = pathlib.Path(os.getcwd())
     with open(DIR / "analysis" / "preproc_config.json") as file:
         cfg = json.load(file)
@@ -238,7 +242,7 @@ if __name__ == "__main__":
     ids = list(name for name in os.listdir(pilot_DIR)
                if os.path.isdir(os.path.join(pilot_DIR, name)))
     # STEP 1: make raw.fif files and save them into raw_folder.
-    for id in ids[3:]:  # Iterate through subjects.
+    for id in ids:  # Iterate through subjects.
         folder_path = pilot_DIR / id
         header_files = folder_path.glob("*.vhdr")
         raw_files = []
