@@ -9,7 +9,7 @@ import string
 from experiment.config import get_config
 from experiment.load import load_sounds
 
-slab.set_default_samplerate(48828)
+slab.set_default_samplerate(44100)
 DIR = pathlib.Path(__file__).parent.absolute()
 
 
@@ -142,6 +142,7 @@ class Trials:
         for distance_group in seq:
             stimulus, distance = self.get_sound_from_group(distance_group, scale_type=scale_type, sound_id=sound_id)
             stimulus.level = level
+            stimulus = stimulus.resample(48828)
             print('Playing from group', distance_group, '(' + str(seq.this_n + 1) + '/' + str(seq.n_trials) + ')')
             self.load_to_buffer(stimulus, isi)
             trig_value = distance_group if distance_group != 0 else 6
