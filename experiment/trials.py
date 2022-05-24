@@ -5,11 +5,33 @@ import pathlib
 import numpy
 import time
 import random
+import string
 from experiment.config import get_config
 from experiment.load import load_sounds
 
-slab.set_default_samplerate(44100)
+slab.set_default_samplerate(48828)
 DIR = pathlib.Path(__file__).parent.absolute()
+
+
+class Experiment:
+    _participant_id = None
+
+    def initialise(self):
+        config = get_config()
+        proc_list = config['proc_list']
+        freefield.initialize('dome', zbus=True, device=proc_list)
+        freefield.set_logger('WARNING')
+
+    def generate_id(self):
+        characters = string.ascii_lowercase + string.digits
+        self._participant_id = ''.join(random.choice(characters) for i in range(6))
+        print("Participant ID is:", self._participant_id)
+
+    @property
+    def participant_id(self):
+        if self._participant_id is None:
+            self.generate_id()
+        return self._participant_id
 
 
 class Trials:
@@ -51,7 +73,7 @@ class Trials:
         out = out.ramp(duration=0.01)
         return out
 
-    def get_sound_from_group(self, group_number, scale_type, sound_id='random'):
+    def get_sound_from_group(self, group_number, scale_type='vocal_effort', sound_id='random'):
         if group_number == 0:
             distance = 0
             sound_id = 0
@@ -120,7 +142,7 @@ class Trials:
         for distance_group in seq:
             stimulus, distance = self.get_sound_from_group(distance_group, scale_type=scale_type, sound_id=sound_id)
             stimulus.level = level
-            print('Playing from group', distance_group, '(' + str(seq.this_n) + '/' + str(seq.n_trials) + ')')
+            print('Playing from group', distance_group, '(' + str(seq.this_n + 1) + '/' + str(seq.n_trials) + ')')
             self.load_to_buffer(stimulus, isi)
             trig_value = distance_group if distance_group != 0 else 6
             freefield.write(tag='trigcode', value=trig_value, processors='RX82')
@@ -145,7 +167,6 @@ class Trials:
         freefield.play()
 
     def play_deviant(self):
-        deviant_sound = self.sounds['deviant']
-        deviant_sound.level -= 10
+        deviant_sound = self.sounds[self.sound_type][0].random_choice()[0]
         self.load_to_buffer(deviant_sound)
         freefield.play()

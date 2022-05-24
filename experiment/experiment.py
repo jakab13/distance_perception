@@ -1,15 +1,10 @@
-import freefield
-from experiment.config import get_config
-from experiment.trials import Trials
+from experiment.trials import Trials, Experiment
 
-config = get_config()
-proc_list = config['proc_list']
-freefield.initialize('dome', zbus=True, device=proc_list, )
-freefield.set_logger('WARNING')
+experiment = Experiment()
+experiment.initialise()
+participant_id = experiment.participant_id
 
-participant_id = 'jakab'
-
-vocalist = Trials(sound_type="vocalist-2", participant_id=participant_id)
+vocalist = Trials(sound_type="vocalist-11", participant_id=participant_id)
 
 vocalist.run(stage='training', playback_direction='away')
 vocalist.run(stage='training', playback_direction='toward')

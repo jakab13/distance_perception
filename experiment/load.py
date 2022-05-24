@@ -4,19 +4,11 @@ import os
 import re
 from os import listdir
 from os.path import isfile, join
-import random
-import string
+
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 DIR = pathlib.Path(__file__).parent.absolute()
-
-
-def generate_id():
-    characters = string.ascii_lowercase + string.digits
-    participant_id = ''.join(random.choice(characters) for i in range(6))
-    print("Participant ID is:", participant_id)
-    return participant_id
 
 
 def load_controls(sound_type):
