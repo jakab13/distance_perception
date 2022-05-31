@@ -12,7 +12,6 @@ import os
 # TODO: fix notch filter in filtering function (zapline? Doesnt work ATM).
 # TODO: implement function to search for files in project folder.
 # TODO: implement other way to calculate SNR. Maybe ask Alessandro?
-# TODO: fix autoreject_epochs (AR results plot does not work)
 
 def snr(epochs):
     """
@@ -229,21 +228,21 @@ def apply_ICA(epochs, reference, n_components=None, method="fastica",
 
 
 if __name__ == "__main__":
-    experiment = "ve"  # "ve" or "noise" pilot data.
+    experiment = "vocal_effort"  # "vocal_effort" or "noise" data.
     DIR = pathlib.Path(os.getcwd())
     with open(DIR / "analysis" / "preproc_config.json") as file:
         cfg = json.load(file)
     with open(DIR / "analysis" / "mapping.json") as file:
         mapping = json.load(file)
     # get pilot folder directories.
-    pilot_DIR = DIR / "analysis" / "data" / f"pilot_{experiment}"
+    data_DIR = DIR / "analysis" / "data" / f"{experiment}"
     fig_path = DIR / "analysis" / "figures" / f"{experiment}"
     # get subject ids
-    ids = list(name for name in os.listdir(pilot_DIR)
-               if os.path.isdir(os.path.join(pilot_DIR, name)))
+    ids = list(name for name in os.listdir(data_DIR)
+               if os.path.isdir(os.path.join(data_DIR, name)))
     # STEP 1: make raw.fif files and save them into raw_folder.
     for id in ids:  # Iterate through subjects.
-        folder_path = pilot_DIR / id
+        folder_path = data_DIR / id
         header_files = folder_path.glob("*.vhdr")
         raw_files = []
         for header_file in header_files:
@@ -251,10 +250,10 @@ if __name__ == "__main__":
                 header_file, preload=True))  # read BrainVision files.
         raw = mne.concatenate_raws(raw_files)  # make raw files
         # make folders for different file types + preprocessing figures.
-        epochs_folder = pilot_DIR / id / "epochs"
-        raw_folder = pilot_DIR / id / "raw_data"
+        epochs_folder = data_DIR / id / "epochs"
+        raw_folder = data_DIR / id / "raw_data"
         fig_folder = fig_path / id
-        evokeds_folder = pilot_DIR / id / "evokeds"
+        evokeds_folder = data_DIR / id / "evokeds"
         for folder in epochs_folder, raw_folder, fig_folder, evokeds_folder:
             if not os.path.isdir(folder):
                 os.makedirs(folder)
