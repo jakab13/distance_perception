@@ -8,6 +8,7 @@ import mne
 import numpy as np
 import pathlib
 import os
+%matplotlib qt
 
 # TODO: fix notch filter in filtering function (zapline? Doesnt work ATM).
 # TODO: implement function to search for files in project folder.
@@ -259,6 +260,8 @@ if __name__ == "__main__":
                 os.makedirs(folder)
         # Use BrainVision mapping as channel names.
         raw.rename_channels(mapping)
+        # Add reference electrode.
+        raw.add_reference_channels('FCz')
         # Use BrainVision montage file to specify electrode positions.
         montage_path = DIR / "analysis" / cfg["montage"]["name"]
         montage = mne.channels.read_custom_montage(fname=montage_path)
@@ -295,10 +298,13 @@ if __name__ == "__main__":
             cv=cfg["autoreject"]["cv"],
             thresh_method=cfg["autoreject"]["thresh_method"])
         epochs_clean.apply_baseline((None, 0))
+        fig, ax = plt.subplots(2)
         epochs_clean.average().plot_image(
-            titles=f"SNR:{snr(epochs_clean):.2f}", show=False)
+            titles=f"SNR:{snr(epochs_clean):.2f}", show=False, axes=ax[0])
+        epochs_clean.average().plot(show=False, axes=ax[1])
+        plt.tight_layout()
         plt.savefig(
-            fig_folder / pathlib.Path("clean_evoked_image.pdf"), dpi=800)
+            fig_folder / pathlib.Path("clean_evoked.pdf"), dpi=800)
         plt.close()
         epochs_clean.save(
             epochs_folder / pathlib.Path(id + "-epo.fif"), overwrite=True)
