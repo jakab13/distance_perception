@@ -14,6 +14,12 @@
     <Radius>1</Radius>
   </Electrode>
   <Electrode>
+    <Name>FCz</Name>
+    <Theta>23</Theta>
+    <Phi>90</Phi>
+    <Radius>1</Radius>
+  </Electrode>
+  <Electrode>
     <Name>Fp1</Name>
     <Theta>-90</Theta>
     <Phi>-72</Phi>
