@@ -115,13 +115,21 @@ class Trials:
         while freefield.read(tag="playback", n_samples=1, processor="RP2"):
             time.sleep(0.01)
 
-    @staticmethod
-    def button_trig(trig_value):
+    def button_trig(self, trig_value, seq, results_file):
         prev_response = 0
         while freefield.read(tag="playback", n_samples=1, processor="RP2"):
             curr_response = freefield.read(tag="response", processor="RP2")
             if curr_response > prev_response:
                 print("button was pressed")
+                response = int(numpy.log2(curr_response))
+                solution = seq.trials[seq.this_n - 1]
+                is_correct = response == solution
+                if is_correct:
+                    self.correct_total += 1
+                results_file.write(solution, tag='solution')
+                results_file.write(response, tag='response')
+                results_file.write(is_correct, tag='is_correct')
+                results_file.write(self.correct_total, tag='correct_total')
                 freefield.write(tag='trigcode', value=trig_value, processors='RX82')
                 print("trigcode was set to:", trig_value)
                 freefield.play(proc='RX82')
@@ -144,12 +152,12 @@ class Trials:
             stimulus.level = level
             stimulus = stimulus.resample(48828)
             print('Playing from group', distance_group, '(' + str(seq.this_n + 1) + '/' + str(seq.n_trials) + ')')
-            self.load_to_buffer(stimulus, isi)
+            self.load_to_buffer(stimulus, isi=isi)
             trig_value = distance_group if distance_group != 0 else 6
             freefield.write(tag='trigcode', value=trig_value, processors='RX82')
             freefield.play()
             if stage == 'experiment':
-                self.button_trig(7)
+                self.button_trig(7, seq, results_file)
             if not record_response:
                 freefield.wait_to_finish_playing(proc="RP2", tag="playback")
             if record_response:
