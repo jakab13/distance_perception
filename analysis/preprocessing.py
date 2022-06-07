@@ -12,6 +12,7 @@ _scaling = 10**6
 
 # TODO: fix notch filter in filtering function (zapline? Doesnt work ATM).
 # TODO: implement function to search for files in project folder.
+# TODO: ask Jakab about noise RMS: does the technique apply for average response?
 
 
 def noise_rms(epochs):
@@ -27,11 +28,11 @@ def noise_rms(epochs):
     return rms
 
 
-def snr(epochs, signal_interval=(0.1, 0.2)):
+def snr(epochs, signal_interval=(0.15, 0.2)):
     """
     Compute signal-to-noise ratio. Take root mean square of noise
     plus signal (interval where evoked activity is expected)
-    and return quotient.
+    and return the quotient.
     """
     signal = epochs.copy()
     signal.crop(signal_interval[0], signal_interval[1])
@@ -256,7 +257,7 @@ if __name__ == "__main__":
     ids = list(name for name in os.listdir(data_DIR)
                if os.path.isdir(os.path.join(data_DIR, name)))
     # STEP 1: make raw.fif files and save them into raw_folder.
-    for id in ids[:1]:  # Iterate through subjects.
+    for id in ids[6:7]:  # Iterate through subjects.
         folder_path = data_DIR / id
         header_files = folder_path.glob("*.vhdr")
         raw_files = []
