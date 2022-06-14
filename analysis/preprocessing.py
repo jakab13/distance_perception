@@ -257,7 +257,7 @@ if __name__ == "__main__":
     ids = list(name for name in os.listdir(data_DIR)
                if os.path.isdir(os.path.join(data_DIR, name)))
     # STEP 1: make raw.fif files and save them into raw_folder.
-    for id in ids[6:7]:  # Iterate through subjects.
+    for id in ids:  # Iterate through subjects.
         folder_path = data_DIR / id
         header_files = folder_path.glob("*.vhdr")
         raw_files = []
