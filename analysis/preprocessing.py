@@ -1,4 +1,3 @@
-# from meegkit.dss import dss_line_iter
 import glob
 import json
 from mne.preprocessing import ICA
@@ -8,22 +7,39 @@ import mne
 import numpy as np
 import pathlib
 import os
+# %matplotlib qt
+_scaling = 10**6
 
 # TODO: fix notch filter in filtering function (zapline? Doesnt work ATM).
 # TODO: implement function to search for files in project folder.
-# TODO: implement other way to calculate SNR. Maybe ask Alessandro?
+# TODO: ask Jakab about noise RMS: does the technique apply for average response?
 
-def snr(epochs):
+
+def noise_rms(epochs):
+    global scaling
+    epochs_tmp = epochs.copy()
+    n_epochs = epochs.get_data().shape[0]
+    for i in range(n_epochs):
+        if not i % 2:
+            epochs_tmp.get_data()[i, :, :] = -epochs_tmp.get_data()[i, :, :]
+    evoked = epochs_tmp.average().get_data()
+    rms = np.sqrt(np.mean(evoked**2)) * _scaling
+    del epochs_tmp
+    return rms
+
+
+def snr(epochs, signal_interval=(0.15, 0.2)):
     """
     Compute signal-to-noise ratio. Take root mean square of noise
-    (interval before stimulus onset) and signal (interval where evoked activity is expected)
-    and return quotient.
+    plus signal (interval where evoked activity is expected)
+    and return the quotient.
     """
-    signal = epochs.copy().crop(0, 0.4).average().get_data()
-    noise = epochs.copy().crop(None, 0).average().get_data()
-    signal_rms = np.sqrt(np.mean(signal**2))
-    noise_rms = np.sqrt(np.mean(noise**2))
-    return signal_rms / noise_rms
+    signal = epochs.copy()
+    signal.crop(signal_interval[0], signal_interval[1])
+    n_rms = noise_rms(epochs)
+    s_rms = np.sqrt(np.mean(signal.average().get_data()**2)) * _scaling
+    snr = s_rms / n_rms  # signal rms divided by noise rms
+    return snr
 
 
 def filtering(data, notch=None, highpass=None, lowpass=None):
@@ -37,7 +53,7 @@ def filtering(data, notch=None, highpass=None, lowpass=None):
     ax[1].set_title("after filtering")
     ax[1].set(xlabel="Frequency (Hz)", ylabel="μV²/Hz (dB)")
     ax[0].set(xlabel="Frequency (Hz)", ylabel="μV²/Hz (dB)")
-    data.plot_psd(ax=ax[0], show=False)
+    data.plot_psd(ax=ax[0], show=False, exclude=["FCz"])
     if notch is not None:  # ZapLine Notch filter
         X = data.get_data().T
         # remove power line noise with the zapline algorithm
@@ -50,7 +66,7 @@ def filtering(data, notch=None, highpass=None, lowpass=None):
         data.filter(h_freq=lowpass, l_freq=None)
     if highpass is not None:
         data.filter(h_freq=None, l_freq=highpass)
-    data.plot_psd(ax=ax[1], show=False)
+    data.plot_psd(ax=ax[1], show=False, exclude=["FCz"])
     if lowpass is not None and highpass == None:
         fig.savefig(
             fig_folder / pathlib.Path("lowpassfilter.pdf"), dpi=800)
@@ -138,10 +154,9 @@ def reref(epochs, type="average", n_jobs=-1, n_resample=50, min_channels=0.25,
                         min_corr=min_corr, unbroken_time=unbroken_time)  # optimize speed
         ransac.fit(epochs_clean)
         epochs_clean.average().plot(exclude=[])
-        bads = input("Sanity check for obvious bad sensors: ").split()
-        if len(bads) != 0:
-            if bads not in ransac.bad_chs_:
-                ransac.bad_chs_.extend(bads)
+        bads = input("Visual inspection for bad sensors: ").split()
+        if len(bads) != 0 and bads not in ransac.bad_chs_:
+            ransac.bad_chs_.extend(bads)
         epochs_clean = ransac.transform(epochs_clean)
         evoked = epochs.average()
         evoked_clean = epochs_clean.average()
@@ -206,17 +221,18 @@ def apply_ICA(epochs, reference, n_components=None, method="fastica",
     # ica.fit(epochs_ica[~reject_log.bad_epochs])
     ica.fit(epochs_ica)
     # reference ICA containing blink and saccade components.
-    reference = mne.preprocessing.read_ica(fname=reference)
+    ref = mne.preprocessing.read_ica(fname=reference)
     # .labels_ dict must contain "blinks" key with int values.
-    components = reference.labels_["blinks"]
+    components = ref.labels_["blinks"]
     for component in components:
-        mne.preprocessing.corrmap([reference, ica], template=(0, components[component]),
+        mne.preprocessing.corrmap([ref, ica], template=(0, components[component]),
                                   label="blinks", plot=False, threshold=cfg["ica"]["threshold"])
         ica.apply(epochs_ica, exclude=ica.labels_["blinks"])  # apply ICA
     ica.plot_components(ica.labels_["blinks"], show=False)
     plt.savefig(fig_folder / pathlib.Path("ICA_components.pdf"), dpi=800)
     plt.close()
-    ica.plot_sources(inst=epochs, show=False, start=0, stop=10, show_scrollbars=False)
+    ica.plot_sources(inst=epochs, show=False, start=0,
+                     stop=10, show_scrollbars=False)
     plt.savefig(fig_folder / pathlib.Path(f"ICA_sources.pdf"), dpi=800)
     plt.close()
     snr_post_ica = snr(epochs_ica)
@@ -241,7 +257,7 @@ if __name__ == "__main__":
     ids = list(name for name in os.listdir(data_DIR)
                if os.path.isdir(os.path.join(data_DIR, name)))
     # STEP 1: make raw.fif files and save them into raw_folder.
-    for id in ids[0]:  # Iterate through subjects.
+    for id in ids:  # Iterate through subjects.
         folder_path = data_DIR / id
         header_files = folder_path.glob("*.vhdr")
         raw_files = []
@@ -259,6 +275,8 @@ if __name__ == "__main__":
                 os.makedirs(folder)
         # Use BrainVision mapping as channel names.
         raw.rename_channels(mapping)
+        # Add reference electrode.
+        raw.add_reference_channels('FCz')
         # Use BrainVision montage file to specify electrode positions.
         montage_path = DIR / "analysis" / cfg["montage"]["name"]
         montage = mne.channels.read_custom_montage(fname=montage_path)
@@ -283,7 +301,7 @@ if __name__ == "__main__":
             unbroken_time=cfg["reref"]["ransac"]["unbroken_time"],
             plot=cfg["reref"]["plot"])
         # STEP 4: apply ICA for blink and saccade artifact rejection.
-        epochs_ica = apply_ICA(epochs_ref, reference=DIR / 'analysis' / cfg["ica"]["reference"],
+        epochs_ica = apply_ICA(epochs_ref, reference=cfg["ica"]["reference"],
                                n_components=cfg["ica"]["n_components"],
                                threshold=cfg["ica"]["threshold"],
                                method=cfg["ica"]["method"])
@@ -295,10 +313,13 @@ if __name__ == "__main__":
             cv=cfg["autoreject"]["cv"],
             thresh_method=cfg["autoreject"]["thresh_method"])
         epochs_clean.apply_baseline((None, 0))
+        fig, ax = plt.subplots(2)
         epochs_clean.average().plot_image(
-            titles=f"SNR:{snr(epochs_clean):.2f}", show=False)
+            titles=f"SNR:{snr(epochs_clean):.2f}", show=False, axes=ax[0])
+        epochs_clean.average().plot(show=False, axes=ax[1])
+        plt.tight_layout()
         plt.savefig(
-            fig_folder / pathlib.Path("clean_evoked_image.pdf"), dpi=800)
+            fig_folder / pathlib.Path("clean_evoked.pdf"), dpi=800)
         plt.close()
         epochs_clean.save(
             epochs_folder / pathlib.Path(id + "-epo.fif"), overwrite=True)

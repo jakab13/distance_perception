@@ -25,7 +25,7 @@
       "button_press": 7
     },
     "tmin": -0.2,
-    "tmax": 0.8,
+    "tmax": 1.0,
     "detrend": null,
     "baseline": null
   },
