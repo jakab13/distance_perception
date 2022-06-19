@@ -1,4 +1,4 @@
-from meegkit.dss import dss_line_iter
+# from meegkit.dss import dss_line_iter
 import glob
 import json
 from mne.preprocessing import ICA
@@ -241,7 +241,7 @@ if __name__ == "__main__":
     ids = list(name for name in os.listdir(data_DIR)
                if os.path.isdir(os.path.join(data_DIR, name)))
     # STEP 1: make raw.fif files and save them into raw_folder.
-    for id in ids:  # Iterate through subjects.
+    for id in ids[0]:  # Iterate through subjects.
         folder_path = data_DIR / id
         header_files = folder_path.glob("*.vhdr")
         raw_files = []
@@ -283,7 +283,7 @@ if __name__ == "__main__":
             unbroken_time=cfg["reref"]["ransac"]["unbroken_time"],
             plot=cfg["reref"]["plot"])
         # STEP 4: apply ICA for blink and saccade artifact rejection.
-        epochs_ica = apply_ICA(epochs_ref, reference=cfg["ica"]["reference"],
+        epochs_ica = apply_ICA(epochs_ref, reference=DIR / 'analysis' / cfg["ica"]["reference"],
                                n_components=cfg["ica"]["n_components"],
                                threshold=cfg["ica"]["threshold"],
                                method=cfg["ica"]["method"])

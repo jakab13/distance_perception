@@ -33,7 +33,7 @@
     "n_components": 0.999,
     "method": "fastica",
     "threshold": 0.75,
-    "reference": "D:/Projects/distance_perception/analysis/reference_ica.fif"
+    "reference": "reference_ica.fif"
   },
   "autoreject": {
     "n_interpolate": [1, 4, 8, 16],

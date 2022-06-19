@@ -7,7 +7,7 @@ import pathlib
 import mne
 import os
 import matplotlib.pyplot as plt
-%matplotlib qt
+# %matplotlib qt
 
 
 plt.style.use(['seaborn-colorblind', 'seaborn-darkgrid'])
@@ -18,7 +18,7 @@ def ignore_conds(d, *keys):
 
 
 if __name__ == "__main__":
-    experiment = "laughter"  # either "noise" or "laughter"
+    experiment = "vocal_effort"  # either "noise" or "laughter"
     # get pilot folder directory.
     DIR = pathlib.Path(os.getcwd())
     fig_path = pathlib.Path(os.getcwd()) / "analysis" / "figures"
