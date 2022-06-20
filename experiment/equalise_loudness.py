@@ -6,12 +6,15 @@ import numpy
 from scipy.signal import find_peaks
 from os.path import join
 import pyloudnorm as pyln
+import matplotlib.pyplot as plt
+from pydub import AudioSegment
+from scipy.io.wavfile import read
 
 SAMPLERATE = 44100
 slab.Signal.set_default_samplerate(SAMPLERATE)
 DIR = pathlib.Path(__file__).parent.parent.absolute()
 
-filename_core = 'laughter'
+filename_core = 'vocalist-11-short'
 folder_core = DIR / 'experiment' / 'samples' / 'VEs' / filename_core
 simulated_folder_path = folder_core / 'simulated'
 aligned_folder_path = folder_core / 'aligned'
@@ -85,21 +88,24 @@ def align_onset(sound, onset_length=0.15):
     return out
 
 
-def generate_aligned_files(folder_path):
+def generate_aligned_files(folder_path, duration=0.3):
     file_paths = [f for f in abs_file_paths(folder_path)]
+    duration = slab.Signal.in_samples(duration, SAMPLERATE)
     aligned_folder_path = folder_path.parent / 'aligned'
     if not os.path.exists(aligned_folder_path):
         os.makedirs(aligned_folder_path)
     for file_path in file_paths:
         sound = slab.Binaural(file_path)
         aligned_sound = align_onset(sound)
+        aligned_sound.data = aligned_sound.data[:duration]
+        aligned_sound = aligned_sound.ramp(duration=0.05)
         out_filename = 'A_' + file_path.name
         aligned_folder_path = folder_path.parent / 'aligned'
         if not os.path.exists(aligned_folder_path):
             os.makedirs(aligned_folder_path)
         aligned_sound.write(aligned_folder_path / out_filename, normalise=False)
 
-def generate_normalised_files(folder_path, duration=0.5, LUFS=-15.0):
+def generate_normalised_files(folder_path, duration=0.5, LUFS=-15.0, type="pyloudnorm"):
     file_paths = [f for f in abs_file_paths(folder_path)]
     out_folder_path = folder_path.parent / 'normalised'
     if not os.path.exists(normalised_folder_path):
@@ -107,31 +113,36 @@ def generate_normalised_files(folder_path, duration=0.5, LUFS=-15.0):
     duration = slab.Signal.in_samples(duration, SAMPLERATE)
     meter = pyln.Meter(SAMPLERATE, block_size=0.200)
     for file_path in file_paths:
-        sound = slab.Binaural(file_path)
-        sound.level = [numpy.average(sound.level), numpy.average(sound.level)]
-        sound = align_onset(sound)
-        sound.data = sound.data[:duration]
-        sound = sound.ramp(duration=0.05)
-        loudness = meter.integrated_loudness(sound.data)
-        normalised_data = pyln.normalize.loudness(sound.data, loudness, LUFS)
-        out_filename = 'N_' + file_path.name
-        outfile = slab.Binaural(normalised_data)
-        outfile.write(out_folder_path / out_filename, normalise=False)
+        if type == "pyloudnorm":
+            sound = slab.Binaural(file_path)
+            sound.level = [numpy.average(sound.level), numpy.average(sound.level)]
+            sound = align_onset(sound)
+            sound.data = sound.data[:duration]
+            sound = sound.ramp(duration=0.05)
+            loudness = meter.integrated_loudness(sound.data)
+            normalised_data = pyln.normalize.loudness(sound.data, loudness, LUFS)
+            out_filename = 'N_' + file_path.name
+            outfile = slab.Binaural(normalised_data)
+            outfile.write(out_folder_path / "pyloudnorm" / out_filename, normalise=False)
+        elif type == "pydub":
+            sound = AudioSegment.from_file(file_path, "wav")
+            target_dBFS = -25
+            change_in_dBFS = target_dBFS - sound.dBFS
+            normalized_sound = sound.apply_gain(change_in_dBFS)
+            normalized_sound.export(out_folder_path / str('N_pydub_' + file_path.name), format="wav")
     print("Done writing normalised files")
 
 
-def play_normalised_seq(save=False):
-    normalised_file_paths = [f for f in abs_file_paths(normalised_folder_path)]
-    seq = slab.Trialsequence(conditions=normalised_file_paths)
+def play_normalised_seq(folder_path, save=False):
+    file_paths = [f for f in abs_file_paths(folder_path)]
+    seq = slab.Trialsequence(conditions=file_paths)
     out = slab.Binaural.silence(duration=0)
     silence = slab.Binaural.silence(duration=1.0, samplerate=SAMPLERATE)
-    for normalised_file_path in seq:
-        sound = slab.Binaural(normalised_file_path)
+    for file_path in seq:
+        sound = slab.Binaural(file_path)
         out = slab.Binaural.sequence(out, sound, silence)
         if not save:
-            print(normalised_file_path.name)
-            print(numpy.average(sound.spectral_feature(feature="flatness")) * 1000)
-            print(numpy.average(sound.level))
+            print(file_path.name)
             sound.play()
             input("ja?")
     if save:
@@ -139,3 +150,21 @@ def play_normalised_seq(save=False):
         out = out + noise
         out.write(normalised_folder_path / 'stitched.wav', normalise=True)
 
+def plot_envs(folder_path):
+    file_names = sorted(folder_path.glob('*.wav'))
+    results = {1: {}, 2: {}, 3: {}, 4: {}, 5: {}}
+    single_envs = dict()
+    for file_name in file_names:
+        distance = file_name.name[file_name.name.find('dist-') + len('dist-'):file_name.name.rfind('_try')]
+        sig = slab.Sound(file_name)
+        res = sig.envelope()
+        single_envs[file_name.name] = res
+        results[int(distance)][str(file_name.stem)] = res
+    envs = [None] * 5
+    for i in range(5):
+        envs[i] = numpy.mean([results[i+1][key].data for id, key in enumerate(results[i+1])], axis=0)
+    for i, key in enumerate(envs):
+        plt.plot(numpy.mean(envs[i], axis=1), label="Vocal Effort {}".format(i+1))
+    plt.title("{} - Average sound energy".format(folder_path.parent.parent.name + "_" + folder_path.name))
+    plt.legend()
+    plt.show()
