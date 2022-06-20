@@ -3,9 +3,9 @@ from experiment.trials import Trials, Experiment
 experiment = Experiment()
 experiment.initialise()
 
-participant_id = 'debugging'
+participant_id = 'test'
 
-vocalist = Trials(sound_type="vocalist-2", participant_id=participant_id)
+vocalist = Trials(sound_type="vocalist-11-short", participant_id=participant_id)
 
 vocalist.run(stage='training', playback_direction='away')
 vocalist.run(stage='training', playback_direction='toward')
