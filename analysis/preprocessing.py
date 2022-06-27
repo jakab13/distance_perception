@@ -301,7 +301,8 @@ if __name__ == "__main__":
             unbroken_time=cfg["reref"]["ransac"]["unbroken_time"],
             plot=cfg["reref"]["plot"])
         # STEP 4: apply ICA for blink and saccade artifact rejection.
-        epochs_ica = apply_ICA(epochs_ref, reference=cfg["ica"]["reference"],
+        reference_path = DIR / "analysis" / cfg["ica"]["reference"]
+        epochs_ica = apply_ICA(epochs_ref, reference=reference_path,
                                n_components=cfg["ica"]["n_components"],
                                threshold=cfg["ica"]["threshold"],
                                method=cfg["ica"]["method"])
