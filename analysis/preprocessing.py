@@ -79,7 +79,7 @@ def filtering(data, notch=None, highpass=None, lowpass=None):
     if notch is not None:
         fig.savefig(
             fig_folder / pathlib.Path("ZapLine_filter.pdf"), dpi=800)
-    plt.close()
+    # plt.close()
     return data
 
 
@@ -256,8 +256,10 @@ if __name__ == "__main__":
     # get subject ids
     ids = list(name for name in os.listdir(data_DIR)
                if os.path.isdir(os.path.join(data_DIR, name)))
+    ids = ["u88rdo"]
     # STEP 1: make raw.fif files and save them into raw_folder.
     for id in ids:  # Iterate through subjects.
+        id = ids[0]
         folder_path = data_DIR / id
         header_files = folder_path.glob("*.vhdr")
         raw_files = []
@@ -291,7 +293,7 @@ if __name__ == "__main__":
         epochs = mne.Epochs(raw, events, tmin=cfg["epochs"]["tmin"], tmax=cfg["epochs"]["tmax"],
                             event_id=cfg["epochs"][f"event_id_{experiment}"], preload=True,
                             baseline=cfg["epochs"]["baseline"], detrend=cfg["epochs"]["detrend"])  # apply baseline
-        del raw  # del raw data to save working memory.
+        del raw, raw_files  # del raw data to save working memory.
         # STEP 3: rereference epochs.
         epochs_ref = reref(
             epochs, type=cfg["reref"]["type"], n_jobs=cfg["reref"]["ransac"]["n_jobs"],
@@ -327,7 +329,6 @@ if __name__ == "__main__":
         # STEP 6: average epochs and write evokeds to a file.
         evokeds = [epochs_clean[condition].average()
                    for condition in cfg["epochs"][f"event_id_{experiment}"].keys()]
-        mne.write_evokeds(evokeds_folder / pathlib.Path(id +
-                          "-ave.fif"), evokeds, overwrite=True)
+        mne.write_evokeds(evokeds_folder / pathlib.Path(id + "-ave.fif"), evokeds)
         # delete data to save working memory.
         del epochs, epochs_ref, epochs_ica, epochs_clean, evokeds
