@@ -4,6 +4,7 @@ import os
 import pathlib
 import re
 import random
+from datetime import datetime
 from os import listdir
 from os.path import isfile, join
 
@@ -25,16 +26,36 @@ for file_name in file_names:
     loaded_sound_obj[distance] = slab.Binaural(file_path)
 
 groups = {
-    1: [17, 18, 19, 20, 21, 22, 23],
-    2: [57, 60, 64, 67, 70, 74, 77],
-    3: [190, 201, 212, 224, 235, 246, 257],
-    4: [636, 673, 710, 748, 785, 822, 860],
-    5: [2125, 2250, 2375, 2500, 2625, 2750, 2875]
+    1: [20],
+    2: [60],
+    3: [220],
+    4: [760],
+    5: [2500]
 }
 
 isi = 0.7
 
-seq = slab.Trialsequence(conditions=[1, 2, 3, 4, 5], trials=[1, 2, 3, 4, 5])
+def create_and_store_file(parent_folder, subject_folder, subject_id, trialsequence, group):
+    file = slab.ResultsFile(subject=subject_folder, folder=parent_folder)
+    subject_id = subject_id
+    file.write(subject_id, tag='subject_ID')
+    today = datetime.now()
+    file.write(today.strftime('%Y/%m/%d'), tag='Date')
+    file.write(today.strftime('%H:%M:%S'), tag='Time')
+    file.write(group, tag='group')
+    file.write(trialsequence, tag='Trial')
+    return file
+
+training_1 = slab.Trialsequence(conditions=[1, 2, 3, 4, 5], n_reps=1, trials=[1,2,3,4,5])
+training_2 = slab.Trialsequence(conditions=[1, 2, 3, 4, 5], n_reps=1, trials=[5,4,3,2,1])
+
+
+seq = slab.Trialsequence(conditions=[1, 2, 3, 4, 5], n_reps=1)
+
+n = 1
+response = 0
+right_response = 0
+
 for group in seq:
     distance = random.choice(groups[group])
     sound = loaded_sound_obj[distance]
@@ -43,4 +64,26 @@ for group in seq:
     out.level = 80
     out = out.ramp(duration=0.01)
     out.play()
+    seq.add_response(group)
+    with slab.key('Button press') as key:
+        response = key.getch() - 48
+        seq.add_response(response)
+    if response == group:
+        seq.add_response(1)
+        right_response += 1
+    else:
+        seq.add_response(0)
+        # print out live result
+    print(str(right_response) + ' / ' + str(n))
+    n += 1
+    responses = seq.save_json("sequence.json", clobber=True)
+    print("Finished")
+    print('playing group', group)
+    print('Response:', response)
 print(seq)
+
+create_and_store_file(parent_folder='first_tries', subject_folder='Joschua', subject_id='jg',
+                                          trialsequence=seq, group=groups)
+
+#get the training done in a diff doc
+#clean up the code
