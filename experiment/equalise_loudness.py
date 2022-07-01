@@ -88,16 +88,14 @@ def align_onset(sound, onset_length=0.15):
     return out
 
 
-def generate_aligned_files(folder_path, duration=0.3):
+def generate_aligned_files(folder_path, onset_length=0.15):
     file_paths = [f for f in abs_file_paths(folder_path)]
-    duration = slab.Signal.in_samples(duration, SAMPLERATE)
     aligned_folder_path = folder_path.parent / 'aligned'
     if not os.path.exists(aligned_folder_path):
         os.makedirs(aligned_folder_path)
     for file_path in file_paths:
         sound = slab.Binaural(file_path)
-        aligned_sound = align_onset(sound)
-        aligned_sound.data = aligned_sound.data[:duration]
+        aligned_sound = align_onset(sound, onset_length)
         aligned_sound = aligned_sound.ramp(duration=0.05)
         out_filename = 'A_' + file_path.name
         aligned_folder_path = folder_path.parent / 'aligned'
