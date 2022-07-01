@@ -7,6 +7,8 @@ import random
 from datetime import datetime
 from os import listdir
 from os.path import isfile, join
+from Function_Setup import create_and_store_file
+
 
 slab.set_default_samplerate(44100)
 DIR = pathlib.Path(os.getcwd())
@@ -34,28 +36,11 @@ groups = {
 }
 
 isi = 0.7
-
-def create_and_store_file(parent_folder, subject_folder, subject_id, trialsequence, group):
-    file = slab.ResultsFile(subject=subject_folder, folder=parent_folder)
-    subject_id = subject_id
-    file.write(subject_id, tag='subject_ID')
-    today = datetime.now()
-    file.write(today.strftime('%Y/%m/%d'), tag='Date')
-    file.write(today.strftime('%H:%M:%S'), tag='Time')
-    file.write(group, tag='group')
-    file.write(trialsequence, tag='Trial')
-    return file
-
-training_1 = slab.Trialsequence(conditions=[1, 2, 3, 4, 5], n_reps=1, trials=[1,2,3,4,5])
-training_2 = slab.Trialsequence(conditions=[1, 2, 3, 4, 5], n_reps=1, trials=[5,4,3,2,1])
-
-
-seq = slab.Trialsequence(conditions=[1, 2, 3, 4, 5], n_reps=1)
-
 n = 1
 response = 0
 right_response = 0
 
+seq = slab.Trialsequence(conditions=[1, 2, 3, 4, 5], n_reps=1)
 for group in seq:
     distance = random.choice(groups[group])
     sound = loaded_sound_obj[distance]
@@ -85,5 +70,3 @@ print(seq)
 create_and_store_file(parent_folder='first_tries', subject_folder='Joschua', subject_id='jg',
                                           trialsequence=seq, group=groups)
 
-#get the training done in a diff doc
-#clean up the code
