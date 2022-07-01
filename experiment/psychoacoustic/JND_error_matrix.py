@@ -101,3 +101,10 @@ def plot_matrix(y_test, y_pred):
 
 plot_matrix(y_test, y_pred)
 
+envs = [None] * 5
+for i in range(5):
+    envs[i] = loaded_sound_obj[groups[i+1][0]].envelope()
+    envs[i].data = envs[i].data[:22050]
+    plt.plot(numpy.mean(envs[i], axis=1), label="{}cm".format(groups[i+1][0]))
+plt.legend()
+plt.show()
