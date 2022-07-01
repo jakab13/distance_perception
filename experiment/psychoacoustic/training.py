@@ -37,8 +37,8 @@ groups = {
 
 isi = 1.2
 
-training_1 = slab.Trialsequence(conditions=[1, 2, 3, 4, 5], n_reps=1, trials=[1,2,3,4,5])
-for group in training_1:
+training_away = slab.Trialsequence(conditions=[1, 2, 3, 4, 5], n_reps=1, trials=[1,2,3,4,5])
+for group in training_away:
     distance = random.choice(groups[group])
     sound = loaded_sound_obj[distance]
     out = copy.deepcopy(sound)
@@ -47,4 +47,16 @@ for group in training_1:
     out = out.ramp(duration=0.01)
     out.play()
     print("Finished")
-print(training_1)
+print(training_away)
+
+training_towards = slab.Trialsequence(conditions = [1,2,3,4,5], n_reps=1, trials=[5,4,3,2,1])
+for group in training_towards:
+    distance = random.choice(groups[group])
+    sound = loaded_sound_obj[distance]
+    out = copy.deepcopy(sound)
+    out.data = out.data[:slab.Sound.in_samples(isi, 44100)]
+    out.level = 80
+    out = out.ramp(duration=0.01)
+    out.play()
+    print("Finished")
+print(training_towards)
