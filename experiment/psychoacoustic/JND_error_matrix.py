@@ -5,30 +5,55 @@ import os
 import pathlib
 import re
 import random
-from datetime import datetime
 from os import listdir
 from os.path import isfile, join
-# from Function_Setup import create_and_store_file
 from sklearn.metrics import confusion_matrix
 import seaborn as sn
-import pandas as pd
 import matplotlib.pyplot as plt
+import time
 
-def create_and_store_file(parent_folder, subject_folder, subject_id, trialsequence, group):
-    file = slab.ResultsFile(subject=subject_folder, folder=parent_folder)
-    subject_id = subject_id
-    file.write(subject_id, tag='subject_ID')
-    today = datetime.now()
-    file.write(today.strftime('%Y/%m/%d'), tag='Date')
-    file.write(today.strftime('%H:%M:%S'), tag='Time')
-    file.write(group, tag='group')
-    file.write(trialsequence, tag='Trial')
-    return file
+############################################################################
+
+subject_id = "jakab"
+set_name = "log"
+# set_name = "lin"
+# set_name = "log_inv"
+isi = 1.0
+stage = "test"
+# stage = "training_away"
+# stage = "training_toward"
+
+############################################################################
 
 slab.set_default_samplerate(44100)
 DIR = pathlib.Path(os.getcwd())
 
-folder_path = DIR / 'experiment' / 'samples' / 'pinknoise_ramped' / 'normalised' / 'pyloudnorm'
+def create_and_store_file(parent_folder="confusion_matrices", subject_id="test", trialsequence=None, set_name=None):
+    file = slab.ResultsFile(subject=subject_id, folder=parent_folder)
+    file.write(subject_id, tag='subject_ID')
+    file.write(set_name, tag='set_name')
+    file.write(trialsequence, tag='trial')
+    return file
+
+def plot_matrix(subject_id, set_name):
+    subject_folder = DIR / "confusion_matrices" / subject_id
+    text_file_names = [f for f in listdir(subject_folder) if not f.endswith('.png') and not f.startswith('.')]
+    text_file_names.sort()
+    seq_data = slab.ResultsFile.read_file(subject_folder / text_file_names[-1], tag="trial")
+    seq_data = seq_data["data"]
+    y_test = [int(i[0]) for i in seq_data]
+    y_pred = [int(i[1]) for i in seq_data]
+    cm = confusion_matrix(y_test, y_pred)
+    cmn = cm.astype('float') / cm.sum(axis=1)[:, numpy.newaxis]
+    fig, ax = plt.subplots(figsize=(5, 5))
+    sn.heatmap(cmn, annot=True, fmt='.2f', cmap="Blues")
+    fig_title = "subject-{}_set-{}".format(subject_id, set_name)
+    plt.title(fig_title + "_" + str(time.time()))
+    plt.savefig(subject_folder / str(fig_title + ".png"))
+    plt.show(block=False)
+
+
+folder_path = DIR / 'experiment' / 'samples' / 'pinknoise_ramped' / 'normalised' / 'pydub'
 
 file_names = [f for f in listdir(folder_path)
               if isfile(join(folder_path, f))
@@ -42,69 +67,57 @@ for file_name in file_names:
     distance = int(re.findall('\d+', distance_string)[0])
     loaded_sound_obj[distance] = slab.Binaural(file_path)
 
-groups = {
-    1: [20],
-    2: [60],
-    3: [220],
-    4: [760],
-    5: [2500]
+distance_sets = {
+    'lin': {
+        1: numpy.arange(20, 80, 20),
+        2: numpy.arange(680, 760, 20),
+        3: numpy.arange(1320, 1500, 20),
+        4: numpy.arange(2000, 2200, 20),
+        5: numpy.arange(2600, 3000, 20)
+    },
+    'log': {
+        1: numpy.arange(20, 80, 20),
+        2: numpy.arange(280, 340, 20),
+        3: numpy.arange(780, 840, 20),
+        4: numpy.arange(1320, 1400, 20),
+        5: numpy.arange(2600, 3000, 20)
+    },
+    'log_inv': {
+        1: numpy.arange(20, 80, 20),
+        2: numpy.arange(900, 1000, 20),
+        3: numpy.arange(1300, 1500, 20),
+        4: numpy.arange(1800, 2000, 20),
+        5: numpy.arange(2600, 3000, 20)
+    }
 }
 
-isi = 0.7
-n = 1
 response = 0
 right_response = 0
+distance_set = distance_sets[set_name]
 
-seq = slab.Trialsequence(conditions=[1, 2, 3, 4, 5], n_reps=10)
+if stage == "test":
+    seq = slab.Trialsequence(conditions=[1, 2, 3, 4, 5], n_reps=2)
+elif stage == "training_away":
+    seq = slab.Trialsequence(conditions=[1, 2, 3, 4, 5], trials=[1, 2, 3, 4, 5], n_reps=1)
+elif stage == "training_toward":
+    seq = slab.Trialsequence(conditions=[1, 2, 3, 4, 5], trials=[5, 4, 3, 2, 1], n_reps=1)
+
 for group in seq:
-    distance = random.choice(groups[group])
+    distance = random.choice(distance_set[group])
     sound = loaded_sound_obj[distance]
     out = copy.deepcopy(sound)
-    out.data = out.data[:slab.Sound.in_samples(isi, 44100)]
-    out.level = 80
+    out.data = out.data[:slab.Signal.in_samples(isi, 44100)]
     out = out.ramp(duration=0.01)
     out.play()
     seq.add_response(group)
-    with slab.key('Button press') as key:
-        response = key.getch() - 48
-        seq.add_response(response)
-    if response == group:
-        seq.add_response(1)
-        right_response += 1
-    else:
-        seq.add_response(0)
-        # print out live result
-    print(str(right_response) + ' / ' + str(n))
-    n += 1
-    responses = seq.save_json("sequence.json", clobber=True)
-    print("Finished")
-    print('playing group', group)
-    print('Response:', response)
-print(seq)
+    if stage == "test":
+        with slab.key('Button press') as key:
+            response = key.getch() - 48
+            seq.add_response(response)
+        print(str(right_response) + ' / ' + str(seq.this_n))
+        print('playing group', group)
+        print('Response:', response)
 
-create_and_store_file(parent_folder='first_tries', subject_folder='Joschua', subject_id='jg',
-                                          trialsequence=seq, group=groups)
-
-seq_data = slab.ResultsFile.read_file(DIR / 'first_tries' / 'Joschua' / 'Joschua_2022-07-01-12-32-03.txt', tag="Trial")
-seq_data = seq_data["data"]
-y_test = [int(i[0]) for i in seq_data]
-y_pred = [int(i[1]) for i in seq_data]
-
-
-def plot_matrix(y_test, y_pred):
-    cm = confusion_matrix(y_test, y_pred)
-    cmn = cm.astype('float') / cm.sum(axis=1)[:, numpy.newaxis]
-    fig, ax = plt.subplots(figsize=(5, 5))
-    sn.heatmap(cmn, annot=True, fmt='.2f', cmap="Blues")
-    plt.show(block=False)
-
-
-plot_matrix(y_test, y_pred)
-
-envs = [None] * 5
-for i in range(5):
-    envs[i] = loaded_sound_obj[groups[i+1][0]].envelope()
-    envs[i].data = envs[i].data[:22050]
-    plt.plot(numpy.mean(envs[i], axis=1), label="{}cm".format(groups[i+1][0]))
-plt.legend()
-plt.show()
+if stage == "test":
+    create_and_store_file(subject_id=subject_id, trialsequence=seq, set_name=set_name)
+    plot_matrix(subject_id, set_name)
