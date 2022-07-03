@@ -29,23 +29,23 @@ def get_config():
             5: numpy.arange(1940, 2020, 20)
         },
         'log_10': {
-            1: [20, 40],
-            2: [100, 120],
-            3: [400, 420],
-            4: [800, 820, 840],
-            5: [1000, 1020],
-            6: [1200, 1220],
-            7: [1500, 1520],
-            8: [1760, 1780, 1800],
-            9: [2000, 2020, 2040],
-            10: [2460, 2480, 2500]
+            1: numpy.arange(20, 60, 20),
+            2: numpy.arange(140, 180, 20),
+            3: numpy.arange(380, 440, 20),
+            4: numpy.arange(560, 640, 20),
+            5: numpy.arange(780, 860, 20),
+            6: numpy.arange(980, 1020, 20),
+            7: numpy.arange(1180, 1280, 20),
+            8: numpy.arange(1580, 1660, 20),
+            9: numpy.arange(2200, 2300, 20),
+            10: numpy.arange(2900, 3000, 20)
         },
         'log_5': {
-            1: numpy.arange(20, 80, 20),
+            1: numpy.arange(20, 60, 20),
             2: numpy.arange(380, 440, 20),
-            3: numpy.arange(780, 840, 20),
-            4: numpy.arange(1180, 1240, 20),
-            5: numpy.arange(1580, 1580, 20)
+            3: numpy.arange(780, 860, 20),
+            4: numpy.arange(1580, 1660, 20),
+            5: numpy.arange(2900, 3000, 20)
         },
         'log_5_full': {
             1: numpy.arange(20, 60, 20),

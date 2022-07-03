@@ -83,7 +83,7 @@ class Trials:
         sound = self.sounds[self.sound_type][distance].random_choice()[0]
         return sound, distance
 
-    def load_to_buffer(self, sound, isi=1.2):
+    def load_to_buffer(self, sound, isi=1.0):
         out = self.crop_sound(sound, isi)
         isi = slab.Sound.in_samples(isi, out.samplerate)
         isi = max(out.n_samples, isi)
@@ -137,9 +137,10 @@ class Trials:
             prev_response = curr_response
 
     def run(self, stage='training', playback_direction='random', scale_type='log_5_full', sound_id='random',
-            record_response=False, save_trials=True, n_reps=1, isi=1.2, level=75):
-        results_folder = DIR / 'results' / 'vocal_effort'
-        results_file = slab.ResultsFile(subject=self.participant_id, folder=results_folder, filename=stage)
+            record_response=False, save_trials=True, n_reps=1, isi=1.0, level=65):
+        results_folder = DIR / 'results' / 'pinknoise'
+        results_file = slab.ResultsFile(subject=self.participant_id, folder=results_folder)
+        results_file.write(stage, tag='stage')
         self.correct_total = 0
         self.load_config()
         scale_type = 'vocal_effort' if 'vocalist' in self.sound_type else scale_type
@@ -158,24 +159,32 @@ class Trials:
             freefield.play()
             if stage == 'experiment':
                 self.button_trig(7, seq, results_file)
-            if not record_response:
-                freefield.wait_to_finish_playing(proc="RP2", tag="playback")
+            # if not record_response:
+                # freefield.wait_to_finish_playing(proc="RP2", tag="playback")
             if record_response:
                 self.collect_responses(seq, results_file)
         if save_trials:
             results_file.write(seq, tag='sequence')
             print("Saved participant responses")
 
-    def play_control(self, sound_id='random'):
+    def play_control(self, sound_id='random', level=65, isi=1.0):
         control_sounds = self.sounds[self.sound_type]['controls']
         if sound_id == 'random':
             control_sound = random.choice(control_sounds)
         else:
             control_sound = control_sounds[sound_id]
-        self.load_to_buffer(control_sound)
+        control_sound.level = level
+        self.load_to_buffer(control_sound, isi)
         freefield.play()
 
     def play_deviant(self):
         deviant_sound = self.sounds[self.sound_type][0].random_choice()[0]
         self.load_to_buffer(deviant_sound)
         freefield.play()
+
+    def run_control(self, n_reps=1, isi=0.7):
+        seq = slab.Trialsequence(conditions=[0, 1, 2, 3, 4], n_reps=n_reps)
+        for condition in seq:
+            trig_value = 1
+            freefield.write(tag='trigcode', value=trig_value, processors='RX82')
+            self.play_control(isi=isi)
