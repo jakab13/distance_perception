@@ -82,9 +82,15 @@ def align_onset(sound, onset_length=0.15):
     peak_right_idx = numpy.argmax(peaks_right[1]['peak_heights'])
     peak_idx = min(peaks_left[0][peak_left_idx], peaks_right[0][peak_right_idx])
     onset_length = slab.Signal.in_samples(onset_length, SAMPLERATE)
-    onset_idx = max(peak_idx - onset_length, 0)
-    out = copy.deepcopy(sound)
-    out.data = out.data[onset_idx:]
+    if peak_idx < onset_length:
+        silence_length = onset_length - peak_idx
+        silence = slab.Binaural.silence(duration=int(silence_length))
+        out = copy.deepcopy(sound)
+        out = slab.Binaural.sequence(silence, out)
+    else:
+        onset_idx = max(peak_idx - onset_length, 0)
+        out = copy.deepcopy(sound)
+        out.data = out.data[onset_idx:]
     return out
 
 
@@ -153,7 +159,7 @@ def play_normalised_seq(folder_path, duration=1.0, save=False):
         out = out + noise
         out.write(folder_path / 'stitched.wav', normalise=True)
 
-def plot_envs(folder_path):
+def plot_ve_envs(folder_path):
     file_names = sorted(folder_path.glob('*.wav'))
     results = {1: {}, 2: {}, 3: {}, 4: {}, 5: {}}
     single_envs = dict()
@@ -172,3 +178,53 @@ def plot_envs(folder_path):
     plt.title("{} - Average sound energy".format(folder_path.parent.parent.name + "_" + folder_path.name))
     plt.legend()
     plt.show()
+
+distance_groups = {
+    1: numpy.arange(20, 80, 20),
+    2: numpy.arange(280, 340, 20),
+    3: numpy.arange(700, 820, 20),
+    4: numpy.arange(1400, 1560, 20),
+    5: numpy.arange(2600, 3000, 20)
+}
+
+def plot_pn_envs(folder_path, distance_groups):
+    file_names = sorted(folder_path.glob('*.wav'))
+    results = {}
+    # single_envs = dict()
+    for file_name in file_names:
+        distance = file_name.name[file_name.name.find('dist-') + len('dist-'):file_name.name.rfind('.wav')]
+        sig = slab.Sound(file_name)
+        res = sig.envelope()
+        # single_envs[file_name.name] = res
+        results[int(distance)] = res
+    envs = [None] * 5
+    for i, distance_group in enumerate(distance_groups):
+        envs[i] = numpy.mean([results[distance].data[:int(44100*0.3)]
+                                           for distance in distance_groups[distance_group]], axis=0)
+    for i, key in enumerate(envs):
+        plt.plot(numpy.mean(envs[i], axis=1), label="Distance group " + str(i+1))
+                                                    # str(numpy.average(distance_groups[i+1])/100) + "m")
+    plt.title("{} - Average sound energy".format(folder_path.parent.parent.name + "_" + folder_path.name))
+    plt.legend()
+    plt.show()
+
+for type in ["pydub", "pyloudnorm"]:
+    folder_path = normalised_folder_path / type
+    file_names = sorted(folder_path.glob('*.wav'))
+    results = {}
+    rms = [None] * len(file_names)
+    distances = [None] * len(file_names)
+    i = 0
+    for file_name in file_names:
+        distance = file_name.name[file_name.name.find('dist-') + len('dist-'):file_name.name.rfind('.wav')]
+        sig = slab.Sound(file_name)
+        sig.data = sig.data[0:int(44100*0.3)]
+        rms[i] = numpy.average(sig.level)
+        distances[i] = int(distance)
+        i += 1
+    rms.sort()
+    distances.sort()
+    plt.plot(distances, rms, '-o', label=type)
+plt.title("Sound energy per distance")
+plt.legend()
+plt.show()
