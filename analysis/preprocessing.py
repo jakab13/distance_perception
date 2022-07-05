@@ -223,20 +223,25 @@ def apply_ICA(epochs, reference, n_components=None, method="fastica",
     # reference ICA containing blink and saccade components.
     ref = mne.preprocessing.read_ica(fname=reference)
     # .labels_ dict must contain "blinks" key with int values.
-    components = ref.labels_["blinks"]
-    for component in components:
-        mne.preprocessing.corrmap([ref, ica], template=(0, components[component]),
-                                  label="blinks", plot=False, threshold=cfg["ica"]["threshold"])
-        ica.apply(epochs_ica, exclude=ica.labels_["blinks"])  # apply ICA
-    ica.plot_components(ica.labels_["blinks"], show=False)
+    ica.plot_components()
+    ica.exclude = [int(x) for x in input("ICA exclude: ").split()]
+    ica.plot_components(ica.exclude, show=False)
     plt.savefig(fig_folder / pathlib.Path("ICA_components.pdf"), dpi=800)
     plt.close()
+    # components = ref.labels_["blinks"]
+    # for component in components:
+    #     mne.preprocessing.corrmap([ref, ica], template=(0, components[component]),
+    #                               label="blinks", plot=False, threshold=cfg["ica"]["threshold"])
+    # ica.plot_components(ica.labels_["blinks"])
+    # plt.savefig(fig_folder / pathlib.Path("ICA_components.pdf"), dpi=800)
+    # plt.close()
+    ica.apply(epochs_ica)  # apply ICA
     ica.plot_sources(inst=epochs, show=False, start=0,
                      stop=10, show_scrollbars=False)
     plt.savefig(fig_folder / pathlib.Path(f"ICA_sources.pdf"), dpi=800)
     plt.close()
     snr_post_ica = snr(epochs_ica)
-    ica.plot_overlay(epochs.average(), exclude=ica.labels_["blinks"],
+    ica.plot_overlay(epochs.average(), exclude=ica.exclude,
                      show=False, title=f"SNR: {snr_pre_ica:.2f} (before), {snr_post_ica:.2f} (after)")
     plt.savefig(fig_folder / pathlib.Path("ICA_results.pdf"), dpi=800)
     plt.close()
@@ -256,7 +261,7 @@ if __name__ == "__main__":
     # get subject ids
     ids = list(name for name in os.listdir(data_DIR)
                if os.path.isdir(os.path.join(data_DIR, name)))
-    ids = ["u88rdo"]
+    ids = ["cs2i9p"]
     # STEP 1: make raw.fif files and save them into raw_folder.
     for id in ids:  # Iterate through subjects.
         id = ids[0]

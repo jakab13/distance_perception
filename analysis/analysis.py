@@ -22,12 +22,34 @@ if __name__ == "__main__":
     # get pilot folder directory.
     DIR = pathlib.Path(os.getcwd())
     fig_path = pathlib.Path(os.getcwd()) / "analysis" / "figures"
-    sub_DIR = DIR / "analysis" / "data" / f"pilot_{experiment}"  # pilot_laughter or pilot_noise
+    sub_DIR = DIR / "analysis" / "data" / f"{experiment}"  # pilot_laughter or pilot_noise
     with open(DIR / "analysis" / "preproc_config.json") as file:
         cfg = json.load(file)
     # get subject ids
     ids = list(name for name in os.listdir(sub_DIR)
                if os.path.isdir(os.path.join(sub_DIR, name)))
+    # IDs of participants with 500ms stimulus lengths
+    # ids = [
+    #     "cl3vh1",
+    #     "e0q0kf",
+    #     "zx4v7q",
+    #     "l6e5vs",
+    #     "atz2ps",
+    #     "t895pw",
+    #     "22ocyt",
+    #     "c93bxb",
+    #     "8adzch",
+    #     "4q868v",
+    #     "03d3rc",
+    #     "375j87",
+    #     "gnnl7z",
+    #     "gml110",
+    #     "2ojf8e",
+    #     "oucxs1",
+    #     "4jyisj",
+    #     "kptdo4",
+    #     "oht0ey"
+    # ]
     # make dictionaries with empty event keys.
     # first copy config file to prevent changes.
     evokeds, evokeds_avrgd, evokeds_data = cfg["epochs"][f"event_id_{experiment}"].copy(
@@ -49,11 +71,11 @@ if __name__ == "__main__":
                     continue
     # show some topographic and line plots to get an impression of evoked responses.
     # plot control condition to have a look at simple auditory evoked signals without reverb info.
-    channel = ["Cz"]  # select electrode of interest.
-    evokeds_avrgd["deviant"].plot_joint()
-    evokeds_avrgd["distance/20"].plot_topomap(times=np.linspace(
-        0.05, 0.6, 10), title="Topograhical responses control")
-    mne.viz.plot_evoked_topo(evokeds_avrgd["distance/20"])
+    channel = ["Cz", "FC1", "FC2", "C1", "C2", "FCz"]  # select electrode of interest.
+    # evokeds_avrgd["deviant"].plot_joint()
+    # evokeds_avrgd["distance/20"].plot_topomap(times=np.linspace(
+    #     0.05, 0.6, 10), title="Topograhical responses control")
+    # mne.viz.plot_evoked_topo(evokeds_avrgd["distance/20"])
     # Central electrodes show auditory evoked activity and differences between conditions.
     # Select Cz and look at conditions around 350 ms after stimuluis onset.
     mne.viz.plot_compare_evokeds(ignore_conds(
@@ -65,7 +87,7 @@ if __name__ == "__main__":
     # differences between conditions.
     # get difference response between two conditions.
     evoked_diff = mne.combine_evoked(
-        [evokeds_avrgd["distance/20"], evokeds_avrgd["control"]], weights=[1, -1])
+        [evokeds_avrgd["vocal_effort/2"], evokeds_avrgd["vocal_effort/5"]], weights=[1, -1])
     evoked_diff.plot_joint()  # plot difference
     evoked_diff.plot_image()  # plot difference
     # get adjacency matrix.
