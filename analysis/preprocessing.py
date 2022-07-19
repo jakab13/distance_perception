@@ -261,7 +261,7 @@ if __name__ == "__main__":
     # get subject ids
     ids = list(name for name in os.listdir(data_DIR)
                if os.path.isdir(os.path.join(data_DIR, name)))
-    ids = ["cs2i9p"]
+    ids = ["zx4v7q"]
     # STEP 1: make raw.fif files and save them into raw_folder.
     for id in ids:  # Iterate through subjects.
         id = ids[0]
