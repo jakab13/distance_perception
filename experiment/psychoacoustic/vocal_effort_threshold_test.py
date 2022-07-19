@@ -1,4 +1,6 @@
 import copy
+import time
+
 import numpy
 import slab
 import os
@@ -19,8 +21,12 @@ import matplotlib.pyplot as plt
 subject_id = 'joschua'
 current_duration = 150
 vocalist = 'vocalist-2'
+is_training = True
 
 #################################################################
+
+if is_training:
+    current_duration = 300
 
 def create_and_store_file(parent_folder, subject_id, trialsequence, duration, vocalist):
     file = slab.ResultsFile(subject=subject_id, folder=parent_folder)
@@ -60,30 +66,35 @@ n = 1
 response = 0
 right_response = 0
 
-seq = slab.Trialsequence(conditions=[1, 2, 3, 4, 5], n_reps=2)
+if is_training:
+    seq = slab.Trialsequence(trials=[1, 2, 3, 4, 5, 5, 4, 3, 2, 1], n_reps=10)
+else:
+    seq = slab.Trialsequence(conditions=[1, 2, 3, 4, 5], n_reps=10)
 for group in seq:
     sound = random.choice(loaded_sound_obj[group])
     out = copy.deepcopy(sound)
     out.level = 80
     out = out.ramp(duration=0.01)
     out.play()
-    seq.add_response(group)
-    with slab.key('Button press') as key:
-        response = key.getch() - 48
-        seq.add_response(response)
-    if response == group:
-        seq.add_response(1)
-        right_response += 1
-    else:
-        seq.add_response(0)
-        # print out live result
-    print(str(right_response) + ' / ' + str(n))
-    n += 1
-    responses = seq.save_json("sequence.json", clobber=True)
-    print("Finished")
-    print('playing group', group)
-    print('Response:', response)
-print(seq)
+    if not is_training:
+        seq.add_response(group)
+        with slab.key('Button press') as key:
+            response = key.getch() - 48
+            seq.add_response(response)
+        if response == group:
+            seq.add_response(1)
+            right_response += 1
+        else:
+            seq.add_response(0)
+            # print out live result
+        print(str(right_response) + ' / ' + str(n))
+        n += 1
+        responses = seq.save_json("sequence.json", clobber=True)
+        print("Finished")
+        print('playing group', group)
+        print('Response:', response)
+    time.sleep(0.8) #check out best timing
 
-create_and_store_file(parent_folder=DIR / 'experiment' / 'results', subject_id=subject_id,
+if not is_training:
+    create_and_store_file(parent_folder=DIR / 'experiment' / 'results', subject_id=subject_id,
                                           trialsequence=seq, duration=current_duration, vocalist=vocalist)
