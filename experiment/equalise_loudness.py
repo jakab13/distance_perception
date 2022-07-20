@@ -14,8 +14,8 @@ SAMPLERATE = 44100
 slab.Signal.set_default_samplerate(SAMPLERATE)
 DIR = pathlib.Path(__file__).parent.parent.absolute()
 
-filename_core = 'pinknoise_ramped'
-folder_core = DIR / 'experiment' / 'samples' / filename_core
+filename_core = 'VEs'
+folder_core = DIR / 'experiment' / 'samples' / filename_core / 'vocalist-all-500ms'
 simulated_folder_path = folder_core / 'simulated'
 aligned_folder_path = folder_core / 'aligned'
 a_weighted_folder_path = folder_core / 'a_weighted'
@@ -164,7 +164,7 @@ def plot_ve_envs(folder_path):
     results = {1: {}, 2: {}, 3: {}, 4: {}, 5: {}}
     single_envs = dict()
     for file_name in file_names:
-        distance = file_name.name[file_name.name.find('dist-') + len('dist-'):file_name.name.rfind('.wav')]
+        distance = file_name.name[file_name.name.find('dist-') + len('dist-'):file_name.name.rfind('_try')]
         sig = slab.Sound(file_name)
         res = sig.envelope()
         single_envs[file_name.name] = res
@@ -176,6 +176,18 @@ def plot_ve_envs(folder_path):
     for i, key in enumerate(envs):
         plt.plot(numpy.mean(envs[i], axis=1), label="Vocal Effort {}".format(i+1))
     plt.title("{} - Average sound energy".format(folder_path.parent.parent.name + "_" + folder_path.name))
+
+    sound_energy = numpy.mean(numpy.mean(envs, axis=0), axis=1)
+    plt.title("Average sound energy - 500ms")
+    plt.xlabel('Time (s)')
+    plt.ylabel('RMS (normalised)')
+    plt.plot(sound_energy)
+    plt.fill_between(numpy.arange(0, len(envs[0])), sound_energy, alpha=0.2)
+    plt.xlim((-0.2 * 44100, 0.7 * 44100))
+    plt.xticks([-0.1 * 44100, 0, 0.1 * 44100, 0.2 * 44100, 0.3 * 44100, 0.4 * 44100, 0.5 * 44100, 0.6 * 44100],
+               [-0.1, 0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
+    plt.yticks(numpy.linspace(0, numpy.amax(sound_energy), 5), numpy.linspace(0, 1, 5))
+
     plt.legend()
     plt.show()
 
@@ -192,7 +204,7 @@ def plot_pn_envs(folder_path, distance_groups):
     results = {}
     # single_envs = dict()
     for file_name in file_names:
-        distance = file_name.name[file_name.name.find('dist-') + len('dist-'):file_name.name.rfind('.wav')]
+        distance = file_name.name[file_name.name.find('dist-') + len('dist-'):file_name.name.rfind('_try')]
         sig = slab.Sound(file_name)
         res = sig.envelope()
         # single_envs[file_name.name] = res
@@ -216,7 +228,7 @@ for type in ["pydub", "pyloudnorm"]:
     distances = [None] * len(file_names)
     i = 0
     for file_name in file_names:
-        distance = file_name.name[file_name.name.find('dist-') + len('dist-'):file_name.name.rfind('.wav')]
+        distance = file_name.name[file_name.name.find('dist-') + len('dist-'):file_name.name.rfind('_try')]
         sig = slab.Sound(file_name)
         sig.data = sig.data[0:int(44100*0.3)]
         rms[i] = numpy.average(sig.level)
