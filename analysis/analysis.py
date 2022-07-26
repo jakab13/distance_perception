@@ -8,6 +8,8 @@ import pathlib
 import mne
 import os
 import matplotlib.pyplot as plt
+import slab
+from matplotlib.gridspec import GridSpec
 # %matplotlib qt
 
 
@@ -46,7 +48,7 @@ if __name__ == "__main__":
 
     ids = list(name for name in os.listdir(sub_DIR)
                if os.path.isdir(os.path.join(sub_DIR, name)))
-    ids = ids_300ms
+    # ids = ids_300ms
     # make dictionaries with empty event keys.
     # first copy config file to prevent changes.
     evokeds, evokeds_avrgd, evokeds_data = cfg["epochs"][f"event_id_{experiment}"].copy(
@@ -86,8 +88,8 @@ if __name__ == "__main__":
     # mne.viz.plot_evoked_topo(evokeds_avrgd["distance/20"])
     # Central electrodes show auditory evoked activity and differences between conditions.
     # Select Cz and look at conditions around 350 ms after stimuluis onset.
-    # mne.viz.plot_compare_evokeds(ignore_conds(
-    #     evokeds_avrgd, "deviant", "button_press"), picks=channels, cmap=plt.get_cmap('plasma'))
+    mne.viz.plot_compare_evokeds(ignore_conds(
+        evokeds_avrgd, "deviant", "button_press"), cmap=plt.get_cmap('plasma'))
     # evokeds_avrgd["vocal_effort/1"].plot_image()
     combined_evokeds_avrgd = mne.combine_evoked(
         [evokeds_avrgd["vocal_effort/1"], evokeds_avrgd["vocal_effort/2"],
@@ -96,16 +98,55 @@ if __name__ == "__main__":
     # combined_evokeds_avrgd.plot_topomap(times=numpy.linspace(0.15, 0.5, 20),
     #                                     title="Combined Evoked (long) (150-500ms)",
     #                                     vmin=-5, vmax=5)
-    time_ranges_of_interest = [
-        (0.05, 0.14),
-        (0.22, 0.27)
-    ]
-    combined_evokeds_avrgd.plot_joint(times=[0.108, 0.226, 0.341])
+    # time_ranges_of_interest = [0.108, 0.226, 0.341]
+    time_ranges_of_interest = [0.226, 0.341]
+
+    topomap = combined_evokeds_avrgd.plot_topomap(times=time_ranges_of_interest, show=False)
+    joint_plot = combined_evokeds_avrgd.plot_joint(times=time_ranges_of_interest, show=False)
     combined_evokeds_avrgd.plot(gfp="only", spatial_colors=True)
     combined_evokeds_avrgd.plot(gfp=True, spatial_colors=True)
 
+
     plt.savefig(fig_path / "Combined Evoked (long) (150-500ms).png")
 
+    def get_pn_envs():
+        distance_groups = {
+            1: numpy.arange(20, 80, 20),
+            2: numpy.arange(280, 340, 20),
+            3: numpy.arange(700, 820, 20),
+            4: numpy.arange(1400, 1560, 20),
+            5: numpy.arange(2600, 3000, 20)
+        }
+        folder_path = DIR / 'experiment' / 'samples' / 'pinknoise_ramped' / 'normalised' / 'pydub'
+        file_names = sorted(folder_path.glob('*.wav'))
+        results = {}
+        # single_envs = dict()
+        for file_name in file_names:
+            distance = file_name.name[file_name.name.find('dist-') + len('dist-'):file_name.name.rfind('.wav')]
+            sig = slab.Sound(file_name)
+            res = sig.envelope()
+            # single_envs[file_name.name] = res
+            results[int(distance)] = res
+        envs = [None] * 5
+        for i, distance_group in enumerate(distance_groups):
+            envs[i] = numpy.mean([results[distance].data[:int(44100*0.5)] for distance in distance_groups[distance_group]], axis=0)
+        # for i, key in enumerate(envs):
+        #     plt.plot(numpy.mean(envs[i], axis=1), label="Distance group " + str(i + 1))
+            # str(numpy.average(distance_groups[i+1])/100) + "m")
+        total_average_energy = numpy.mean(numpy.mean(envs, axis=0), axis=1)
+        return total_average_energy
+
+    # fig, axes = plt.subplots(nrows=4, ncols=1)
+    ax1 = plt.subplot2grid((4, 2), (0, 0), colspan=1)
+    ax2 = plt.subplot2grid((4, 2), (0, 1), colspan=1)
+    ax3 = plt.subplot2grid((4, 2), (1, 0), colspan=2)
+    ax4 = plt.subplot2grid((4, 2), (2, 0), colspan=2)
+    ax5 = plt.subplot2grid((4, 2), (3, 0), colspan=2)
+    plt.tight_layout()
+    # mne.viz.topomap.plot_evoked_topomap(combined_evokeds_avrgd, times=0.226, show=False, axes=ax1, colorbar=False)
+    mne.viz.plot_evoked(combined_evokeds_avrgd, spatial_colors=True, axes=ax3)
+    mne.viz.plot_evoked(combined_evokeds_avrgd, spatial_colors=True, gfp="only", axes=ax4)
+    ax5.plot(total_average_energy)
     # Do cluster-based permutation analysis over all
     # subjects to look for statistical significant
     # differences between conditions.
