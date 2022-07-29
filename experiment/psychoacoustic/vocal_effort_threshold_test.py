@@ -1,7 +1,5 @@
 import copy
 import time
-
-import numpy
 import slab
 import os
 import pathlib
@@ -10,18 +8,14 @@ import random
 from datetime import datetime
 from os import listdir
 from os.path import isfile, join
-# from Function_Setup import create_and_store_file
-from sklearn.metrics import confusion_matrix
-import seaborn as sn
-import pandas as pd
-import matplotlib.pyplot as plt
 
 #################################################################
 
-subject_id = 'joschua'
-current_duration = 150
+subject_id = 'test'
+current_duration = 250
 vocalist = 'vocalist-2'
-is_training = True
+is_training = False
+subject_done = [275, 250, 175, 150, 125, 100, 75, 50, 25]
 
 #################################################################
 
@@ -61,15 +55,15 @@ for file_name in file_names:
     else:
         loaded_sound_obj[distance].append(sound)
 
-isi = 0.7
+#isi is replaced by time.sleep()
 n = 1
 response = 0
 right_response = 0
 
 if is_training:
-    seq = slab.Trialsequence(trials=[1, 2, 3, 4, 5, 5, 4, 3, 2, 1], n_reps=10)
+    seq = slab.Trialsequence(trials=[1, 2, 3, 4, 5, 5, 4, 3, 2, 1])
 else:
-    seq = slab.Trialsequence(conditions=[1, 2, 3, 4, 5], n_reps=10)
+    seq = slab.Trialsequence(conditions=[1, 2, 3, 4, 5], n_reps=10, kind='random_permutation')
 for group in seq:
     sound = random.choice(loaded_sound_obj[group])
     out = copy.deepcopy(sound)
@@ -91,9 +85,13 @@ for group in seq:
         n += 1
         responses = seq.save_json("sequence.json", clobber=True)
         print("Finished")
-        print('playing group', group)
-        print('Response:', response)
-    time.sleep(0.8) #check out best timing
+        #print('playing group', group)
+        #print('Response:', response)
+    if is_training:
+        time.sleep(1.0)
+    else:
+        time.sleep(0.7)
+print('Trials finished:', len(subject_done), '/ 11')
 
 if not is_training:
     create_and_store_file(parent_folder=DIR / 'experiment' / 'results', subject_id=subject_id,
