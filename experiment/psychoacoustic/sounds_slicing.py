@@ -1,34 +1,23 @@
-import copy
-import numpy as np
 import slab
 import os
 import pathlib
-import re
-import random
-from datetime import datetime
 from os import listdir
 from os.path import isfile, join
-# from Function_Setup import create_and_store_file
-from sklearn.metrics import confusion_matrix
-import seaborn as sn
-import pandas as pd
-import matplotlib.pyplot as plt
 
 
 slab.set_default_samplerate(44100)
-DIR = pathlib.Path(os.getcwd()) #base of folders is current working directory
+DIR = pathlib.Path(os.getcwd())
 
-
-folder_path = DIR / 'experiment' / 'samples' / 'vocal_effort' / 'vocalist-11' / 'pyloudnorm' / '300' #change to vocalist 2 / 11 here
+#for vocalist-2 and for vocalist-11 separately
+folder_path = DIR / 'experiment' / 'samples' / 'vocal_effort' / 'vocalist-11' / 'pyloudnorm' / '300'
 
 
 file_names = [pathlib.Path(folder_path / f) for f in listdir(folder_path)
               if isfile(join(folder_path, f))
               and not f.startswith('.')]
 
-lengths = [0.25, 0.2, 0.15, 0.1, 0.05]
+lengths = [0.275, 0.25, 0.225, 0.2, 0.175, 0.15, 0.125, 0.1, 0.075, 0.05, 0.025]
 
-#steps: load the sound files, shorten them by 50ms, save, short again, save etc.
 for file in file_names:
     sound = slab.Binaural(file)
     samplerate = sound.samplerate

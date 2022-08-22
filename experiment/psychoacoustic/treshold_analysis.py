@@ -4,6 +4,9 @@ import os
 import pathlib
 import pandas as pd
 from csv import writer
+from scipy import stats
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report, confusion_matrix
 
 DIR = pathlib.Path(os.getcwd())
 
@@ -15,7 +18,8 @@ df = pd.DataFrame({'file_name' : [],
                    'subject_ID' : [],
                    'duration' : [],
                    'correct_in_%' : [],
-                   'mse' : []})
+                   'mse' : [],
+                   'slope' : []})
 threshold_file = df.to_csv(DIR / 'experiment' / 'analysis' / 'results.csv')
 
 for f in file_names:
@@ -27,10 +31,14 @@ for f in file_names:
     correct = (sum(correct_answer)) / len(correct_answer)
     expected = [int(i[0]) for i in seq_data]
     answer = [int(i[1]) for i in seq_data]
-    mse = (sum((np.square(np.subtract(expected, answer))))) / len(expected)
-    list = [[], f, subject_ID, duration, correct, mse]
+    mse = (sum(np.square(np.subtract(expected, answer)))) / len(expected)
+    slope, intercept, r, p, std_err = stats.linregress(expected, answer)
+    def linreg(x):
+        return slope * x + intercept
+    list = [[], f, subject_ID, duration, correct, mse, slope] #do list_1 here so it doesnt interfere with linreg
     with open(DIR / 'experiment' / 'analysis' / 'results.csv', 'a', newline = '') as f_object:
         writer_object = writer(f_object)
         writer_object.writerow(list)
         f_object.close()
 print("finished")
+
