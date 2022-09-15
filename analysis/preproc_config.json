@@ -24,6 +24,14 @@
       "vocal_effort/5": 5,
       "button_press": 7
     },
+    "event_id_pinknoise": {
+      "deviant": 6,
+      "pinknoise/1": 1,
+      "pinknoise/2": 2,
+      "pinknoise/3": 3,
+      "pinknoise/4": 4,
+      "pinknoise/5": 5
+    },
     "tmin": -0.2,
     "tmax": 1.0,
     "detrend": null,

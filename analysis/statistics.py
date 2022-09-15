@@ -1,4 +1,6 @@
 import json
+
+import numpy
 from mne.stats import spatio_temporal_cluster_test
 from mne.channels import find_ch_adjacency, make_1020_channel_selections
 from scipy.stats import ttest_ind
@@ -7,6 +9,7 @@ import pathlib
 import mne
 import os
 import matplotlib.pyplot as plt
+import scipy
 
 
 def ignore_conds(d, *keys):
@@ -14,6 +17,55 @@ def ignore_conds(d, *keys):
 
 # TODO: implement bootstrapping.
 # TODO: do cluster permutation test with all distances together against control.
+
+def jttrend(matrix):
+    conditions = matrix.shape[0]
+    u_total = 0
+    for i in range(0, conditions - 1):
+        for j in range(i + 1, conditions):
+            for i_elem in matrix[i]:
+                for j_elem in matrix[j]:
+                    if i_elem is not None and j_elem is not None:
+                        u = (i_elem < j_elem) + 0.5 * (i_elem == j_elem)
+                        u_total += u
+    nj = np.zeros(matrix.shape[0], dtype=int)
+    for j, column in enumerate(matrix):
+        for elem in column:
+            if elem is not None:
+                nj[j] += 1
+    n = sum(nj)
+    numerator = u_total - ((n*n - sum(nj*nj)) / 4)
+    denominator = np.sqrt((n*n * (2*n + 3) - sum(abs(nj*nj * (2*nj + 3))))/72)
+    z = numerator/denominator
+    p = scipy.stats.norm.sf(abs(z)) #one-sided
+    return z, p
+
+def evoked_jttrend(matrix, window_length=20):
+    total_length = matrix.shape[1]
+    idx = 0
+    jt_array = numpy.empty(total_length - window_length)
+    jt_array_p_values = numpy.empty(total_length - window_length)
+    while idx < total_length - window_length:
+        matrix_window = matrix[:, idx: idx + window_length]
+        jt_array[idx] = jttrend(matrix_window)[0]
+        jt_array_p_values[idx] = jttrend(matrix_window)[1]
+        idx += 1
+    return jt_array, jt_array_p_values
+
+matrix = np.array([[0, 1, 2], [1, 2, 3], [2, 3, 4]])
+matrix = np.array([
+    [0, 0, 1, 1, 2, 2, 4, 9, None, None],
+    [0, 0, 5, 7, 8, 11, 13, 23, 25, 97],
+    [2, 3, 6, 9, 10, 11, 11, 12, 21, None],
+    [0, 3, 5, 6, 10, 19, 56, 100, 132, None],
+    [2, 4, 6, 6, 6, 7, 18, 39, 60, None]
+])
+matrix = np.array([
+    [45, 35, 51, 31, 62, None],
+    [59, 53, 31, 47, 42, 59],
+    [49, 69, 52, 55, 63, None],
+    [72, 55, 65, 58, 61, 51]
+])
 
 if __name__ == "__main__":
     experiment = "noise"  # either "noise" or "laughter"
