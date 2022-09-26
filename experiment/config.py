@@ -52,7 +52,7 @@ def get_config():
             2: numpy.arange(200, 280, 20),
             3: numpy.arange(780, 860, 20),
             4: numpy.arange(1360, 1440, 20),
-            5: numpy.arange(1940, 2020, 20)
+            5: numpy.arange(2200, 2500, 20)
         },
         'vocal_effort': {
             1: [1],
@@ -60,6 +60,13 @@ def get_config():
             3: [3],
             4: [4],
             5: [5]
+        },
+        'USO_scale': {
+            1: [17, 18],
+            2: [57, 60],
+            3: [190, 201],
+            4: [636, 673],
+            5: [2125, 2250]
         }
     }
     config_obj['proc_list'] = proc_list

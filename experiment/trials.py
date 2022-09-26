@@ -80,13 +80,15 @@ class Trials:
         else:
             distances = self.config['distance_groups'][scale_type][group_number]
             distance = random.choice(distances)
-        sound = self.sounds[self.sound_type][distance].random_choice()[0]
+        if sound_id == 'random':
+            id_choices = [2, 3, 5, 7, 10, 11, 14, 17, 18, 19, 20, 21, 22, 25, 27, 28]
+            sound_id = random.choice(id_choices)
+        sound = self.sounds[self.sound_type][distance][sound_id]
         return sound, distance
 
     def load_to_buffer(self, sound, isi=1.0):
         out = self.crop_sound(sound, isi)
-        isi = slab.Sound.in_samples(isi, out.samplerate)
-        isi = max(out.n_samples, isi)
+        isi = slab.Sound.in_samples(isi, 48828)
         freefield.write(tag="playbuflen", value=isi, processors="RP2")
         freefield.write(tag="data_l", value=out.left.data.flatten(), processors="RP2")
         freefield.write(tag="data_r", value=out.right.data.flatten(), processors="RP2")
@@ -137,13 +139,15 @@ class Trials:
             prev_response = curr_response
 
     def run(self, stage='training', playback_direction='random', scale_type='log_5_full', sound_id='random',
-            record_response=False, save_trials=True, n_reps=1, isi=1.0, level=65):
-        results_folder = DIR / 'results' / 'pinknoise'
+            record_response=False, save_trials=True, n_reps=1, isi=0.7, level=65):
+        results_folder = DIR / 'results' / 'USOs'
         results_file = slab.ResultsFile(subject=self.participant_id, folder=results_folder)
         results_file.write(stage, tag='stage')
+        results_file.write(self.sound_type, tag='sound_type')
         self.correct_total = 0
         self.load_config()
         scale_type = 'vocal_effort' if 'vocalist' in self.sound_type else scale_type
+        sound_id = sound_id if self.sound_type == 'USOs' else 0
         deviant_freq = 0.1 if stage == 'experiment' else None
         distance_groups = self.get_distance_groups(playback_direction, scale_type=scale_type)
         seq = slab.Trialsequence(conditions=distance_groups, trials=self.trials, n_reps=n_reps,
@@ -159,8 +163,8 @@ class Trials:
             freefield.play()
             if stage == 'experiment':
                 self.button_trig(7, seq, results_file)
-            # if not record_response:
-                # freefield.wait_to_finish_playing(proc="RP2", tag="playback")
+            if not record_response:
+                freefield.wait_to_finish_playing(proc="RP2", tag="playback")
             if record_response:
                 self.collect_responses(seq, results_file)
         if save_trials:
@@ -181,10 +185,11 @@ class Trials:
         deviant_sound = self.sounds[self.sound_type][0].random_choice()[0]
         self.load_to_buffer(deviant_sound)
         freefield.play()
+        freefield.wait_to_finish_playing()
 
-    def run_control(self, n_reps=1, isi=0.7):
+    def run_control(self, sound_id='random', n_reps=1, isi=0.7):
         seq = slab.Trialsequence(conditions=[0, 1, 2, 3, 4], n_reps=n_reps)
         for condition in seq:
             trig_value = 1
             freefield.write(tag='trigcode', value=trig_value, processors='RX82')
-            self.play_control(isi=isi)
+            self.play_control(sound_id=sound_id, isi=isi)
