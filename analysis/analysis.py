@@ -10,7 +10,7 @@ import os
 import matplotlib.pyplot as plt
 import slab
 from matplotlib.gridspec import GridSpec
-from analysis.joint_decorrelation import compute_transformation
+from analysis.joint_decorrelation_Ole import compute_transformation
 from analysis.utils import apply_transform
 # %matplotlib qt
 

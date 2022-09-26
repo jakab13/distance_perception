@@ -1,12 +1,12 @@
-import sys
-from pathlib import Path
-from analysis.utils import get_epochs, apply_transform
-import argparse
+import pathlib
+import os
+import json
+import mne
+from analysis.utils import apply_transform
 import numpy as np
 from meegkit.dss import dss0, dss1
 from meegkit.utils.covariances import tscov
-root = Path(__file__).parent.parent.absolute()
-sys.path.append(str(root/"code"))
+import matplotlib.pyplot as plt
 
 
 def compute_transformation(epochs, condition1, condition2, keep):
@@ -39,22 +39,56 @@ def compute_transformation(epochs, condition1, condition2, keep):
 
     return to_jd1, from_jd1, to_jd2, from_jd2
 
+experiment = "pinknoise"  # either "pinknoise" or "vocal_effort"
+# get pilot folder directory.
+DIR = pathlib.Path(os.getcwd())
+sub_DIR = DIR / "analysis" / "data" / f"{experiment}"  # pilot_laughter or pilot_noise
+with open(DIR / "analysis" / "preproc_config.json") as file:
+    cfg = json.load(file)
+# get subject ids
+ids = list(name for name in os.listdir(sub_DIR) if os.path.isdir(os.path.join(sub_DIR, name)))
+condition_1 = 1
+condition_2 = 5
+keep = 50
+# initialise evokeds and related objects
+evokeds, evokeds_avrgd, evokeds_data = cfg["epochs"][f"event_id_{experiment}"].copy(
+    ), cfg["epochs"][f"event_id_{experiment}"].copy(), cfg["epochs"][f"event_id_{experiment}"].copy()
+for key in cfg["epochs"][f"event_id_{experiment}"]:
+    evokeds[key], evokeds_avrgd[key], evokeds_data[key] = list(), list(), list()
 
-if __name__ == "__main__":
+evoked_jds = [[], [], [], [], []]
+evoked_jds_avrgd = [[], [], [], [], []]
+for id in ids:
+    evokeds_folder = sub_DIR / id / "evokeds"
+    epochs_folder = sub_DIR / id / "epochs"
+    # evoked = mne.read_evokeds(
+    #     evokeds_folder / pathlib.Path(id + '-ave.fif'))
+    epochs = mne.read_epochs(epochs_folder / pathlib.Path(id + '-epo.fif'))
+    epochs.apply_baseline(baseline=(-0.2, 0))
+    epochs.shift_time(-0.1, relative=True)
 
-    parser = argparse.ArgumentParser(description="Use joint decorrelation to compute unmixing matrices with bootstrapping.")
-    parser.add_argument('experiment', type=str, choices=["freefield", "headphones"])
-    parser.add_argument('subject', type=str)
-    parser.add_argument('keep', type=int, help="number of components to keep after the first jd.")
-    parser.add_argument('conditions', type=int, nargs=2, help="ids of conditions for difference.")
-    args = parser.parse_args()
+    to_jd1, from_jd1, to_jd2, from_jd2 = compute_transformation(epochs, condition_1, condition_2, keep)
+    Y = apply_transform(epochs.get_data(), to_jd1)
+    idx1 = np.where(epochs.events[:, 2] == 1)[0]
+    idx2 = np.where(epochs.events[:, 2] == 2)[0]
+    idx3 = np.where(epochs.events[:, 2] == 3)[0]
+    idx4 = np.where(epochs.events[:, 2] == 4)[0]
+    idx5 = np.where(epochs.events[:, 2] == 5)[0]
+    evoked_jd = [Y[idx1, 0, :].mean(axis=0),
+                 Y[idx2, 0, :].mean(axis=0),
+                 Y[idx3, 0, :].mean(axis=0),
+                 Y[idx4, 0, :].mean(axis=0),
+                 Y[idx5, 0, :].mean(axis=0)]
+    for condition in [0, 1, 2, 3, 4]:
+        evoked_jds[condition].append(np.asarray(evoked_jd[condition]))
 
-    out_folder = root / args.experiment / "input" / "transforms" / args.subject
-    if not out_folder.exists():
-        out_folder.mkdir()
-    epochs = get_epochs(args.subject)
-    epochs = epochs.equalize_event_counts(epochs.event_id.keys())[1]
-    to_jd1, from_jd1, to_jd2, from_jd2 = \
-        compute_transformation(epochs, args.conditions[0], args.conditions[1], args.keep)
-    for matrix, name in zip([to_jd1, to_jd2, from_jd1, from_jd2], ["to_jd1", "to_jd2", "from_jd1", "from_jd2"]):
-        np.save(out_folder/name, matrix)
+for condition in [0, 1, 2, 3, 4]:
+    evoked_jds_avrgd[condition] = np.asarray(evoked_jds[condition]).mean(axis=0)
+
+def plot_evoked_jds(jds):
+    x = np.arange(0, len(jds[0]))
+    for idx, jd in enumerate(jds):
+        name = f"{experiment}" + str(idx)
+        plt.plot(x, -jd, label=name)
+    plt.legend()
+    plt.show()
