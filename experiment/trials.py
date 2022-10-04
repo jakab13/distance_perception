@@ -87,11 +87,14 @@ class Trials:
         return sound, distance
 
     def load_to_buffer(self, sound, isi=1.0):
+        start_time = time.time()
         out = self.crop_sound(sound, isi)
         isi = slab.Sound.in_samples(isi, 48828)
         freefield.write(tag="playbuflen", value=isi, processors="RP2")
         freefield.write(tag="data_l", value=out.left.data.flatten(), processors="RP2")
         freefield.write(tag="data_r", value=out.right.data.flatten(), processors="RP2")
+        time_post_load = time.time()
+        print('post load time', time_post_load - start_time)
 
     def collect_responses(self, seq, results_file):
         response = None
@@ -155,7 +158,6 @@ class Trials:
         for distance_group in seq:
             stimulus, distance = self.get_sound_from_group(distance_group, scale_type=scale_type, sound_id=sound_id)
             stimulus.level = level
-            stimulus = stimulus.resample(48828)
             print('Playing from group', distance_group, '(' + str(seq.this_n + 1) + '/' + str(seq.n_trials) + ')')
             self.load_to_buffer(stimulus, isi=isi)
             trig_value = distance_group if distance_group != 0 else 6

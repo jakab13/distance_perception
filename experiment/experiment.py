@@ -24,7 +24,7 @@ USOs.run(stage='training', scale_type='USO_scale', playback_direction='toward', 
 USOs.run(stage='training', scale_type='USO_scale', playback_direction='away', sound_id='random')
 USOs.run(stage='training', scale_type='USO_scale', playback_direction='toward', sound_id='random')
 
-USOs.run(stage='test', n_reps=4, scale_type='USO_scale', record_response=True)
+USOs.run(stage='test', n_reps=4, scale_type='USO_scale', record_response=True, sound_id=18)
 
 USOs.run_control(n_reps=60, sound_id=14)
 

@@ -52,7 +52,7 @@ def get_config():
             2: numpy.arange(200, 280, 20),
             3: numpy.arange(780, 860, 20),
             4: numpy.arange(1360, 1440, 20),
-            5: numpy.arange(2200, 2500, 20)
+            5: numpy.arange(1800, 2000, 20)
         },
         'vocal_effort': {
             1: [1],
