@@ -36,7 +36,7 @@ class Experiment:
 
 class Trials:
     def __init__(self, participant_id, sound_type="pinknoise"):
-        self.sound_type = sound_type
+        self.sound_type = sound_type + '_resampled'
         self.sounds = load_sounds(self.sound_type)
         self.trials = None
         self.correct_total = 0
@@ -87,14 +87,14 @@ class Trials:
         return sound, distance
 
     def load_to_buffer(self, sound, isi=1.0):
-        start_time = time.time()
         out = self.crop_sound(sound, isi)
         isi = slab.Sound.in_samples(isi, 48828)
+        start_time = time.time()
         freefield.write(tag="playbuflen", value=isi, processors="RP2")
         freefield.write(tag="data_l", value=out.left.data.flatten(), processors="RP2")
         freefield.write(tag="data_r", value=out.right.data.flatten(), processors="RP2")
-        time_post_load = time.time()
-        print('post load time', time_post_load - start_time)
+        end_time = time.time()
+        print(end_time - start_time)
 
     def collect_responses(self, seq, results_file):
         response = None
@@ -142,7 +142,7 @@ class Trials:
             prev_response = curr_response
 
     def run(self, stage='training', playback_direction='random', scale_type='log_5_full', sound_id='random',
-            record_response=False, save_trials=True, n_reps=1, isi=0.7, level=65):
+            record_response=False, save_trials=True, n_reps=1, isi=1.0, level=65):
         results_folder = DIR / 'results' / 'USOs'
         results_file = slab.ResultsFile(subject=self.participant_id, folder=results_folder)
         results_file.write(stage, tag='stage')

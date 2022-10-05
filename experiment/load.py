@@ -33,6 +33,7 @@ def load_deviant():
 
 
 def load_sounds(sound_type):
+    sound_type = sound_type
     loaded_sound_obj = {
         sound_type: {
         }
@@ -56,10 +57,6 @@ def load_sounds(sound_type):
             loaded_sound_obj[sound_type][distance] = {}
         if sound_id not in loaded_sound_obj[sound_type][distance]:
             loaded_sound_obj[sound_type][distance][sound_id] = slab.Binaural(file_path)
-            start_time = time.time()
-            loaded_sound_obj[sound_type][distance][sound_id] = loaded_sound_obj[sound_type][distance][sound_id].resample(48828)
-            time_post_resample = time.time()
-            print('resampled', sound_type, sound_id, 'in', time_post_resample - start_time)
 
     loaded_sound_obj[sound_type]['controls'] = load_controls(sound_type)
     loaded_sound_obj[sound_type][0] = load_deviant()
