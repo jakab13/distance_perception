@@ -46,7 +46,7 @@ def load_sounds(sound_type):
     file_names.sort()
     for file_name in file_names:
         file_path = a_weighted_filepath / file_name
-        if sound_type == 'USOs':
+        if sound_type == 'USOs_resampled':
             sound_id_string = file_name[file_name.find('300ms_') + len('300ms_'):file_name.rfind('_room')]
             sound_id = int(re.findall('\d+', sound_id_string)[0])
         else:

@@ -81,7 +81,7 @@ class Trials:
             distances = self.config['distance_groups'][scale_type][group_number]
             distance = random.choice(distances)
         if sound_id == 'random':
-            id_choices = [2, 3, 5, 7, 10, 11, 14, 17, 18, 19, 20, 21, 22, 25, 27, 28]
+            id_choices = config['selected_USO_IDs']
             sound_id = random.choice(id_choices)
         sound = self.sounds[self.sound_type][distance][sound_id]
         return sound, distance
@@ -89,12 +89,9 @@ class Trials:
     def load_to_buffer(self, sound, isi=1.0):
         out = self.crop_sound(sound, isi)
         isi = slab.Sound.in_samples(isi, 48828)
-        start_time = time.time()
         freefield.write(tag="playbuflen", value=isi, processors="RP2")
         freefield.write(tag="data_l", value=out.left.data.flatten(), processors="RP2")
         freefield.write(tag="data_r", value=out.right.data.flatten(), processors="RP2")
-        end_time = time.time()
-        print(end_time - start_time)
 
     def collect_responses(self, seq, results_file):
         response = None
@@ -150,7 +147,7 @@ class Trials:
         self.correct_total = 0
         self.load_config()
         scale_type = 'vocal_effort' if 'vocalist' in self.sound_type else scale_type
-        sound_id = sound_id if self.sound_type == 'USOs' else 0
+        sound_id = sound_id if self.sound_type == 'USOs_resampled' else 0
         deviant_freq = 0.1 if stage == 'experiment' else None
         distance_groups = self.get_distance_groups(playback_direction, scale_type=scale_type)
         seq = slab.Trialsequence(conditions=distance_groups, trials=self.trials, n_reps=n_reps,

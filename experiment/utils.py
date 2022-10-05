@@ -19,5 +19,11 @@ def write_resampled(sound_type, resample_freq=48828):
         file_path = folder_path / file_name
         sound = slab.Binaural(file_path).resample(resample_freq)
         sound.write(resampled_folder_path/file_name)
+        print('Writing...', file_name)
+    print('Done writing files')
 
 write_resampled('bark')
+write_resampled('bum')
+write_resampled('dunk')
+write_resampled('USOs')
+
