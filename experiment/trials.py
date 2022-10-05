@@ -139,35 +139,38 @@ class Trials:
             prev_response = curr_response
 
     def run(self, stage='training', playback_direction='random', scale_type='log_5_full', sound_id='random',
-            record_response=False, save_trials=True, n_reps=1, isi=1.0, level=65):
+            record_response=False, save_trials=True, n_reps=1, seq_length=20, isi=1.0, level=65):
         results_folder = DIR / 'results' / 'USOs'
         results_file = slab.ResultsFile(subject=self.participant_id, folder=results_folder)
         results_file.write(stage, tag='stage')
         results_file.write(self.sound_type, tag='sound_type')
         self.correct_total = 0
         self.load_config()
-        scale_type = 'vocal_effort' if 'vocalist' in self.sound_type else scale_type
         sound_id = sound_id if self.sound_type == 'USOs_resampled' else 0
+        scale_type = 'vocal_effort' if 'vocalist' in self.sound_type else scale_type
         deviant_freq = 0.1 if stage == 'experiment' else None
         distance_groups = self.get_distance_groups(playback_direction, scale_type=scale_type)
-        seq = slab.Trialsequence(conditions=distance_groups, trials=self.trials, n_reps=n_reps,
+        distance_seq = slab.Trialsequence(conditions=distance_groups, trials=self.trials, n_reps=n_reps,
                                  deviant_freq=deviant_freq)
-        for distance_group in seq:
+        uso_seq = slab.Trialsequence(conditions=self.config['selected_USO_IDs'], kind='infinite')
+        for distance_group in distance_seq:
+            if self.sound_type == 'USOs_resampled' and stage == 'experiment':
+                sound_id = uso_seq.get_future_trial(int(distance_seq.this_n / seq_length) + 1)
             stimulus, distance = self.get_sound_from_group(distance_group, scale_type=scale_type, sound_id=sound_id)
             stimulus.level = level
-            print('Playing from group', distance_group, '(' + str(seq.this_n + 1) + '/' + str(seq.n_trials) + ')')
+            print('Playing from distance', distance_group, '(' + str(distance_seq.this_n + 1) + '/' + str(distance_seq.n_trials) + ')')
             self.load_to_buffer(stimulus, isi=isi)
             trig_value = distance_group if distance_group != 0 else 6
             freefield.write(tag='trigcode', value=trig_value, processors='RX82')
             freefield.play()
             if stage == 'experiment':
-                self.button_trig(7, seq, results_file)
+                self.button_trig(7, distance_seq, results_file)
             if not record_response:
                 freefield.wait_to_finish_playing(proc="RP2", tag="playback")
             if record_response:
-                self.collect_responses(seq, results_file)
+                self.collect_responses(distance_seq, results_file)
         if save_trials:
-            results_file.write(seq, tag='sequence')
+            results_file.write(distance_seq, tag='sequence')
             print("Saved participant responses")
 
     def play_control(self, sound_id='random', level=65, isi=1.0):

@@ -69,6 +69,8 @@ def get_config():
             5: [2125, 2250]
         }
     }
+    selected_USO_IDs = [2, 3, 5, 7, 10, 11, 14, 17, 18, 19, 20, 21, 22, 25, 27, 28]
     config_obj['proc_list'] = proc_list
     config_obj['distance_groups'] = distance_groups
+    config_obj['selected_USO_IDs'] = selected_USO_IDs
     return config_obj

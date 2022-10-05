@@ -30,4 +30,4 @@ USOs.run_control(n_reps=60, sound_id=14)
 
 USOs.play_deviant()
 
-USOs.run(stage='experiment', scale_type='USO_scale', n_reps=60, sound_id=7)
+USOs.run(stage='experiment', scale_type='USO_scale', n_reps=60, isi=1.5)
