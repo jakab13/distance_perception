@@ -81,7 +81,7 @@ class Trials:
             distances = self.config['distance_groups'][scale_type][group_number]
             distance = random.choice(distances)
         if sound_id == 'random':
-            id_choices = config['selected_USO_IDs']
+            id_choices = self.config['selected_USO_IDs']
             sound_id = random.choice(id_choices)
         sound = self.sounds[self.sound_type][distance][sound_id]
         return sound, distance
