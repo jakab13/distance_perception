@@ -140,7 +140,7 @@ class Trials:
             time.sleep(0.01)
             prev_response = curr_response
 
-    def run(self, stage='training', playback_direction='random', scale_type='log_5_full', sound_id='random',
+    def run(self, stage='training', playback_direction='random', scale_type='USO_scale', sound_id='random',
             record_response=False, n_reps=1, seq_length=20, isi=1.0, level=65):
         results_folder = DIR / 'results' / 'USOs'
         results_file = slab.ResultsFile(subject=self.participant_id, folder=results_folder)
