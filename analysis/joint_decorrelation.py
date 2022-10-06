@@ -42,14 +42,17 @@ def compute_transformation(epochs, condition1, condition2, keep):
 experiment = "pinknoise"  # either "pinknoise" or "vocal_effort"
 # get pilot folder directory.
 DIR = pathlib.Path(os.getcwd())
-sub_DIR = DIR / "analysis" / "data" / f"{experiment}"  # pilot_laughter or pilot_noise
+VE_DIR = DIR / "analysis" / "data" / "vocal_effort"  # pilot_laughter or pilot_noise
+PN_DIR = DIR / "analysis" / "data" / "pinknoise"
 with open(DIR / "analysis" / "preproc_config.json") as file:
     cfg = json.load(file)
 # get subject ids
-ids = list(name for name in os.listdir(sub_DIR) if os.path.isdir(os.path.join(sub_DIR, name)))
+ids_VE = list(name for name in os.listdir(VE_DIR) if os.path.isdir(os.path.join(VE_DIR, name)))
+ids_PN = list(name for name in os.listdir(PN_DIR) if os.path.isdir(os.path.join(PN_DIR, name)))
+ids = list(set(ids_VE) & set(ids_PN))
 condition_1 = 1
 condition_2 = 5
-keep = 50
+keep = 8
 # initialise evokeds and related objects
 evokeds, evokeds_avrgd, evokeds_data = cfg["epochs"][f"event_id_{experiment}"].copy(
     ), cfg["epochs"][f"event_id_{experiment}"].copy(), cfg["epochs"][f"event_id_{experiment}"].copy()
@@ -58,22 +61,23 @@ for key in cfg["epochs"][f"event_id_{experiment}"]:
 
 evoked_jds = [[], [], [], [], []]
 evoked_jds_avrgd = [[], [], [], [], []]
-for id in ids:
-    evokeds_folder = sub_DIR / id / "evokeds"
-    epochs_folder = sub_DIR / id / "epochs"
-    # evoked = mne.read_evokeds(
-    #     evokeds_folder / pathlib.Path(id + '-ave.fif'))
-    epochs = mne.read_epochs(epochs_folder / pathlib.Path(id + '-epo.fif'))
-    epochs.apply_baseline(baseline=(-0.2, 0))
-    epochs.shift_time(-0.1, relative=True)
 
-    to_jd1, from_jd1, to_jd2, from_jd2 = compute_transformation(epochs, condition_1, condition_2, keep)
-    Y = apply_transform(epochs.get_data(), to_jd1)
-    idx1 = np.where(epochs.events[:, 2] == 1)[0]
-    idx2 = np.where(epochs.events[:, 2] == 2)[0]
-    idx3 = np.where(epochs.events[:, 2] == 3)[0]
-    idx4 = np.where(epochs.events[:, 2] == 4)[0]
-    idx5 = np.where(epochs.events[:, 2] == 5)[0]
+for id in ids:
+    epochs_folder_VE = VE_DIR / id / "epochs"
+    epochs_VE = mne.read_epochs(epochs_folder_VE / pathlib.Path(id + '-epo.fif'))
+    epochs_folder_PN = PN_DIR / id / "epochs"
+    epochs_PN = mne.read_epochs(epochs_folder_PN / pathlib.Path(id + '-epo.fif'))
+    epochs_PN.apply_baseline(baseline=(-0.2, 0))
+    epochs_PN.shift_time(-0.1, relative=True)
+
+    # epochs_VE.crop(tmin=0.2, tmax=0.3)
+    to_jd1, from_jd1, to_jd2, from_jd2 = compute_transformation(epochs_VE, condition_1, condition_2, keep)
+    Y = apply_transform(epochs_PN.get_data(), [to_jd1, to_jd2])
+    idx1 = np.where(epochs_PN.events[:, 2] == 1)[0]
+    idx2 = np.where(epochs_PN.events[:, 2] == 2)[0]
+    idx3 = np.where(epochs_PN.events[:, 2] == 3)[0]
+    idx4 = np.where(epochs_PN.events[:, 2] == 4)[0]
+    idx5 = np.where(epochs_PN.events[:, 2] == 5)[0]
     evoked_jd = [Y[idx1, 0, :].mean(axis=0),
                  Y[idx2, 0, :].mean(axis=0),
                  Y[idx3, 0, :].mean(axis=0),
@@ -88,7 +92,10 @@ for condition in [0, 1, 2, 3, 4]:
 def plot_evoked_jds(jds):
     x = np.arange(0, len(jds[0]))
     for idx, jd in enumerate(jds):
-        name = f"{experiment}" + str(idx)
+        name = f"{experiment}/" + str(idx + 1)
         plt.plot(x, -jd, label=name)
+    plt.title("Pinknoise ERP - Beamformed from original Pinknoise results")
     plt.legend()
     plt.show()
+
+plot_evoked_jds(evoked_jds_avrgd)
