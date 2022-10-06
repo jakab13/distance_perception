@@ -93,7 +93,7 @@ class Trials:
         freefield.write(tag="data_l", value=out.left.data.flatten(), processors="RP2")
         freefield.write(tag="data_r", value=out.right.data.flatten(), processors="RP2")
 
-    def collect_responses(self, seq, results_file):
+    def collect_responses(self, seq, results_file, sound_id):
         response = None
         reaction_time = None
         start_time = time.time()
@@ -107,6 +107,7 @@ class Trials:
         is_correct = response == seq.trials[seq.this_n]
         if is_correct:
             self.correct_total += 1
+        results_file.write(sound_id, tag='sound_id')
         results_file.write(seq.trials[seq.this_n], tag='solution')
         results_file.write(response, tag='response')
         results_file.write(is_correct, tag='is_correct')
@@ -117,7 +118,7 @@ class Trials:
         while freefield.read(tag="playback", n_samples=1, processor="RP2"):
             time.sleep(0.01)
 
-    def button_trig(self, trig_value, seq, results_file):
+    def button_trig(self, trig_value, seq, results_file, sound_id):
         prev_response = 0
         while freefield.read(tag="playback", n_samples=1, processor="RP2"):
             curr_response = freefield.read(tag="response", processor="RP2")
@@ -128,6 +129,7 @@ class Trials:
                 is_correct = response == solution
                 if is_correct:
                     self.correct_total += 1
+                results_file.write(sound_id, tag='sound_id')
                 results_file.write(solution, tag='solution')
                 results_file.write(response, tag='response')
                 results_file.write(is_correct, tag='is_correct')
@@ -139,7 +141,7 @@ class Trials:
             prev_response = curr_response
 
     def run(self, stage='training', playback_direction='random', scale_type='log_5_full', sound_id='random',
-            record_response=False, save_trials=True, n_reps=1, seq_length=20, isi=1.0, level=65):
+            record_response=False, n_reps=1, seq_length=20, isi=1.0, level=65):
         results_folder = DIR / 'results' / 'USOs'
         results_file = slab.ResultsFile(subject=self.participant_id, folder=results_folder)
         results_file.write(stage, tag='stage')
@@ -163,15 +165,15 @@ class Trials:
             trig_value = distance_group if distance_group != 0 else 6
             freefield.write(tag='trigcode', value=trig_value, processors='RX82')
             freefield.play()
+            distance_seq.add_response({'sound_id': sound_id})
             if stage == 'experiment':
-                self.button_trig(7, distance_seq, results_file)
+                self.button_trig(7, distance_seq, results_file, sound_id)
             if not record_response:
                 freefield.wait_to_finish_playing(proc="RP2", tag="playback")
             if record_response:
-                self.collect_responses(distance_seq, results_file)
-        if save_trials:
-            results_file.write(distance_seq, tag='sequence')
-            print("Saved participant responses")
+                self.collect_responses(distance_seq, results_file, sound_id)
+        results_file.write(distance_seq, tag='sequence')
+        print("Saved participant responses")
 
     def play_control(self, sound_id='random', level=65, isi=1.0):
         control_sounds = self.sounds[self.sound_type]['controls']
