@@ -157,7 +157,7 @@ class Trials:
         uso_seq = slab.Trialsequence(conditions=self.config['selected_USO_IDs'], kind='infinite')
         for distance_group in distance_seq:
             if self.sound_type == 'USOs_resampled' and stage == 'experiment':
-                sound_id = uso_seq.get_future_trial(int(distance_seq.this_n / seq_length) + 1)
+                sound_id = uso_seq.get_future_trial((int(distance_seq.this_n / seq_length)) % len(self.config['selected_USO_IDs']) + 1)
             stimulus, distance = self.get_sound_from_group(distance_group, scale_type=scale_type, sound_id=sound_id)
             stimulus.level = level
             print('Playing from distance', distance_group, '(' + str(distance_seq.this_n + 1) + '/' + str(distance_seq.n_trials) + ')')
