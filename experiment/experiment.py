@@ -3,7 +3,7 @@ from experiment.trials import Trials, Experiment
 experiment = Experiment()
 experiment.initialise()
 
-participant_id = 'pilot'
+participant_id = 'cl3vh1'
 
 bark = Trials(sound_type="bark", participant_id=participant_id)
 bum = Trials(sound_type="bum", participant_id=participant_id)
@@ -28,4 +28,4 @@ USOs.run(stage='test', n_reps=4, scale_type='USO_scale', record_response=True, s
 
 USOs.play_deviant()
 
-USOs.run(stage='experiment', scale_type='USO_scale', n_reps=55, isi=1.5)
+USOs.run(stage='experiment', scale_type='USO_scale', n_reps=60, isi=1.4)

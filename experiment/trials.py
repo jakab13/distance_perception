@@ -38,6 +38,7 @@ class Trials:
     def __init__(self, participant_id, sound_type="pinknoise"):
         self.sound_type = sound_type + '_resampled'
         self.sounds = load_sounds(self.sound_type)
+        self.loudnesses = self.get_loudnesses()
         self.trials = None
         self.correct_total = 0
         self.participant_id = participant_id
@@ -45,6 +46,16 @@ class Trials:
 
     def load_config(self):
         self.config = get_config()
+
+    def get_loudnesses(self):
+        loudnesses = {}
+        for dist, ids in self.sounds[self.sound_type].items():
+            if type(dist) is int and dist is not 0:
+                for id, sound in self.sounds[self.sound_type][dist].items():
+                    loudnesses[dist] = sound.level
+        loudness_min = min([numpy.average(level) for id, level in loudnesses.items()])
+        loudness_max = max([numpy.average(level) for id, level in loudnesses.items()])
+        return [loudness_min, loudness_max]
 
     def get_distance_groups(self, playback_direction, scale_type):
         distance_groups = list(self.config['distance_groups'][scale_type])
@@ -160,6 +171,8 @@ class Trials:
                 sound_id = uso_seq.get_future_trial((int(distance_seq.this_n / seq_length)) % len(self.config['selected_USO_IDs']) + 1)
             stimulus, distance = self.get_sound_from_group(distance_group, scale_type=scale_type, sound_id=sound_id)
             stimulus.level = level
+            loudness_avg = (self.loudnesses[0] + self.loudnesses[1]) / 2
+            stimulus.level = numpy.interp(level, [self.loudnesses[0], self.loudnesses[1]], [loudness_avg - 1.5, loudness_avg + 1.5])
             print('Playing from distance', distance_group, '(' + str(distance_seq.this_n + 1) + '/' + str(distance_seq.n_trials) + ')')
             self.load_to_buffer(stimulus, isi=isi)
             trig_value = distance_group if distance_group != 0 else 6
