@@ -14,8 +14,8 @@ SAMPLERATE = 44100
 slab.Signal.set_default_samplerate(SAMPLERATE)
 DIR = pathlib.Path(__file__).parent.parent.absolute()
 
-filename_core = 'VEs'
-folder_core = DIR / 'experiment' / 'samples' / filename_core / 'vocalist-all-500ms'
+filename_core = 'final_USOs'
+folder_core = DIR / 'experiment' / 'samples' / 'USOs'/ filename_core
 simulated_folder_path = folder_core / 'simulated'
 aligned_folder_path = folder_core / 'aligned'
 a_weighted_folder_path = folder_core / 'a_weighted'
@@ -120,7 +120,7 @@ def generate_normalised_files(folder_path, duration=0.5, LUFS=-25.0, type="pylou
         if type == "pyloudnorm":
             sound = slab.Binaural(file_path)
             sound.level = [numpy.average(sound.level), numpy.average(sound.level)]
-            sound = align_onset(sound)
+            # sound = align_onset(sound)
             snippet = copy.deepcopy(sound)
             snippet.data = snippet.data[:duration]
             snippet = snippet.ramp(duration=0.05)
@@ -176,6 +176,14 @@ def plot_ve_envs(folder_path):
     for i, key in enumerate(envs):
         plt.plot(numpy.mean(envs[i], axis=1), label="Vocal Effort {}".format(i+1))
     plt.title("{} - Average sound energy".format(folder_path.parent.parent.name + "_" + folder_path.name))
+    plt.xlabel('Time (s)')
+    plt.ylabel('RMS (normalised)')
+    plt.plot(sound_energy)
+    plt.fill_between(numpy.arange(0, len(envs[0])), sound_energy, alpha=0.2)
+    plt.xlim((-0.2 * 44100, 0.7 * 44100))
+    plt.xticks([-0.1 * 44100, 0, 0.1 * 44100, 0.2 * 44100, 0.3 * 44100, 0.4 * 44100, 0.5 * 44100, 0.6 * 44100],
+               [-0.1, 0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
+    plt.yticks(numpy.linspace(0, numpy.amax(sound_energy), 5), numpy.linspace(0, 1, 5))
 
     sound_energy = numpy.mean(numpy.mean(envs, axis=0), axis=1)
     plt.title("Average sound energy - 500ms")
@@ -192,26 +200,31 @@ def plot_ve_envs(folder_path):
     plt.show()
 
 distance_groups = {
-    1: numpy.arange(20, 80, 20),
-    2: numpy.arange(280, 340, 20),
-    3: numpy.arange(700, 820, 20),
-    4: numpy.arange(1400, 1560, 20),
-    5: numpy.arange(2600, 3000, 20)
+    1: [0.18, 0.19, 0.2, 0.21, 0.22],
+    2: [1.62, 1.71, 1.8, 1.89, 1.98],
+    3: [4.5, 4.75, 5, 5.25, 5.5, ],
+    4: [10.8, 11.4, 12, 12.6, 13.2],
+    5: [22.5, 23.75, 25, 26.25, 27.5]
 }
+
+distances = [0.18, 0.19, 0.2, 0.21, 0.22, 1.62, 1.71, 1.8, 1.89, 1.98,
+             4.5, 4.75, 5, 5.25, 5.5,
+             10.8, 11.4, 12, 12.6, 13.2,
+             22.5, 23.75, 25, 26.25, 27.5];
 
 def plot_pn_envs(folder_path, distance_groups):
     file_names = sorted(folder_path.glob('*.wav'))
     results = {}
     # single_envs = dict()
     for file_name in file_names:
-        distance = file_name.name[file_name.name.find('dist-') + len('dist-'):file_name.name.rfind('_try')]
+        distance = file_name.name[file_name.name.find('dist-') + len('dist-'):file_name.name.rfind('.wav')]
         sig = slab.Sound(file_name)
         res = sig.envelope()
         # single_envs[file_name.name] = res
         results[int(distance)] = res
     envs = [None] * 5
     for i, distance_group in enumerate(distance_groups):
-        envs[i] = numpy.mean([results[distance].data[:int(44100*0.3)]
+        envs[i] = numpy.mean([results[distance].data[:int(44100*0.5)]
                                            for distance in distance_groups[distance_group]], axis=0)
     for i, key in enumerate(envs):
         plt.plot(numpy.mean(envs[i], axis=1), label="Distance group " + str(i+1))
@@ -228,7 +241,7 @@ for type in ["pydub", "pyloudnorm"]:
     distances = [None] * len(file_names)
     i = 0
     for file_name in file_names:
-        distance = file_name.name[file_name.name.find('dist-') + len('dist-'):file_name.name.rfind('_try')]
+        distance = file_name.name[file_name.name.find('dist-') + len('dist-'):file_name.name.rfind('.wav')]
         sig = slab.Sound(file_name)
         sig.data = sig.data[0:int(44100*0.3)]
         rms[i] = numpy.average(sig.level)
