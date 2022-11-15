@@ -16,12 +16,8 @@ def compute_transformation(epochs, condition1, condition2, keep):
     X = epochs.get_data().transpose(2, 1, 0)
     events = epochs.events
 
-    to_jd1, from_jd1, _, pwr = dss1(X)  # compute the transformations
+    to_jd1, from_jd1, _, pwr = dss1(X, keep1=keep)  # compute the transformations
     del X
-    to_jd1 = to_jd1[:, np.argsort(pwr)[::-1]]  # sort them by magnitude
-    from_jd1 = from_jd1[np.argsort(pwr)[::-1], :]
-    to_jd1 = to_jd1[:, 0:keep]  # only keep the largest ones
-    from_jd1 = from_jd1[0:keep, :]
 
     Y = apply_transform(epochs.get_data(), to_jd1)  # apply the unmixing matrix to get the components
 
@@ -33,9 +29,7 @@ def compute_transformation(epochs, condition1, condition2, keep):
     c1, nc1 = tscov(D)
     c0 /= nc0  # divide by total weight to normalize
     c1 /= nc1
-    to_jd2, from_jd2, _, pwr = dss0(c0, c1)  # compute the transformations
-    to_jd2 = to_jd2[:, np.argsort(pwr)[::-1]]  # sort them by magnitude
-    from_jd2 = from_jd2[np.argsort(pwr)[::-1], :]
+    to_jd2, from_jd2, _, pwr = dss0(c0, c1, keep1=keep)  # compute the transformations
 
     return to_jd1, from_jd1, to_jd2, from_jd2
 
@@ -51,16 +45,16 @@ ids_VE = list(name for name in os.listdir(VE_DIR) if os.path.isdir(os.path.join(
 ids_PN = list(name for name in os.listdir(PN_DIR) if os.path.isdir(os.path.join(PN_DIR, name)))
 ids = list(set(ids_VE) & set(ids_PN))
 condition_1 = 1
-condition_2 = 5
-keep = 8
+condition_2 = 2
+condition_3 = 3
+condition_4 = 4
+condition_5 = 5
+keep = 12
 # initialise evokeds and related objects
 evokeds, evokeds_avrgd, evokeds_data = cfg["epochs"][f"event_id_{experiment}"].copy(
     ), cfg["epochs"][f"event_id_{experiment}"].copy(), cfg["epochs"][f"event_id_{experiment}"].copy()
 for key in cfg["epochs"][f"event_id_{experiment}"]:
     evokeds[key], evokeds_avrgd[key], evokeds_data[key] = list(), list(), list()
-
-evoked_jds = [[], [], [], [], []]
-evoked_jds_avrgd = [[], [], [], [], []]
 
 for id in ids:
     epochs_folder_VE = VE_DIR / id / "epochs"
@@ -71,31 +65,19 @@ for id in ids:
     epochs_PN.shift_time(-0.1, relative=True)
 
     # epochs_VE.crop(tmin=0.2, tmax=0.3)
-    to_jd1, from_jd1, to_jd2, from_jd2 = compute_transformation(epochs_VE, condition_1, condition_2, keep)
-    Y = apply_transform(epochs_PN.get_data(), [to_jd1, to_jd2])
-    idx1 = np.where(epochs_PN.events[:, 2] == 1)[0]
-    idx2 = np.where(epochs_PN.events[:, 2] == 2)[0]
-    idx3 = np.where(epochs_PN.events[:, 2] == 3)[0]
-    idx4 = np.where(epochs_PN.events[:, 2] == 4)[0]
-    idx5 = np.where(epochs_PN.events[:, 2] == 5)[0]
-    evoked_jd = [Y[idx1, 0, :].mean(axis=0),
-                 Y[idx2, 0, :].mean(axis=0),
-                 Y[idx3, 0, :].mean(axis=0),
-                 Y[idx4, 0, :].mean(axis=0),
-                 Y[idx5, 0, :].mean(axis=0)]
-    for condition in [0, 1, 2, 3, 4]:
-        evoked_jds[condition].append(np.asarray(evoked_jd[condition]))
+    to_jd1, from_jd1, to_jd2, from_jd2 = compute_transformation(epochs_VE, condition_5, condition_1, keep)
+    Y = apply_transform(epochs_PN.get_data(), [to_jd1, to_jd2, from_jd2, from_jd1])
+    epochs_PN_jd = epochs_PN.copy()
+    epochs_PN_jd._data = Y
+    evoked = [epochs_PN_jd[condition].average()
+              for condition in cfg["epochs"][f"event_id_{experiment}"].keys()]
+    for condition in evoked:
+        if condition.comment in evokeds:
+            evokeds[condition.comment].append(condition)
+            if len(evokeds[condition.comment]) == len(ids):
+                evokeds_avrgd[condition.comment] = mne.grand_average(
+                    evokeds[condition.comment])
+            else:
+                continue
 
-for condition in [0, 1, 2, 3, 4]:
-    evoked_jds_avrgd[condition] = np.asarray(evoked_jds[condition]).mean(axis=0)
 
-def plot_evoked_jds(jds):
-    x = np.arange(0, len(jds[0]))
-    for idx, jd in enumerate(jds):
-        name = f"{experiment}/" + str(idx + 1)
-        plt.plot(x, -jd, label=name)
-    plt.title("Pinknoise ERP - Beamformed from original Pinknoise results")
-    plt.legend()
-    plt.show()
-
-plot_evoked_jds(evoked_jds_avrgd)

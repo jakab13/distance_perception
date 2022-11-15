@@ -81,19 +81,6 @@ if __name__ == "__main__":
         epochs.apply_baseline(baseline=(-0.2, 0))
         epochs.shift_time(-0.1, relative=True)
 
-        to_jd1, from_jd1, to_jd2, from_jd2 = \
-            compute_transformation(epochs, 1, 5, 1)
-        Y = apply_transform(epochs.get_data(), to_jd1)
-        idx1 = np.where(epochs.events[:, 2] == 1)[0]
-        idx2 = np.where(epochs.events[:, 2] == 2)[0]
-        idx3 = np.where(epochs.events[:, 2] == 3)[0]
-        idx4 = np.where(epochs.events[:, 2] == 4)[0]
-        idx5 = np.where(epochs.events[:, 2] == 5)[0]
-        evoked_jd = [Y[idx1, 0, :].mean(axis=0),
-                     Y[idx2, 0, :].mean(axis=0),
-                     Y[idx3, 0, :].mean(axis=0),
-                     Y[idx4, 0, :].mean(axis=0),
-                     Y[idx5, 0, :].mean(axis=0)]
         evoked = [epochs[condition].average()
                    for condition in cfg["epochs"][f"event_id_{experiment}"].keys()]
         for condition in evoked:
@@ -104,11 +91,6 @@ if __name__ == "__main__":
                         evokeds[condition.comment])
                 else:
                     continue
-
-        for condition in [0, 1, 2, 3, 4]:
-            evoked_jds[condition].append(evoked_jd[condition])
-            if len(evoked_jds[condition]) == len(ids):
-                evoked_jds_avrgd[condition] = evoked_jds[condition].mean(axis=0)
         # peak_times[id] = {}
         # peak_amplitudes[id] = {}
         # for condition in evoked:
