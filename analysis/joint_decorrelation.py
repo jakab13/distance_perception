@@ -9,7 +9,7 @@ from meegkit.utils.covariances import tscov
 import matplotlib.pyplot as plt
 
 
-def compute_transformation(epochs, condition1, condition2, keep):
+def compute_transformation(epochs, condition1, condition2, condition3, condition4, condition5, keep):
 
     if not (condition1 in epochs.events[:, 2] and condition2 in epochs.events[:, 2]):
         raise ValueError("'conditions' must be values of two event types!")
@@ -23,10 +23,14 @@ def compute_transformation(epochs, condition1, condition2, keep):
 
     idx1 = np.where(events[:, 2] == condition1)[0]
     idx2 = np.where(events[:, 2] == condition2)[0]
-    D = Y[idx1, :, :].mean(axis=0) - Y[idx2, :, :].mean(axis=0)    # compute the difference between conditions
+    idx3 = np.where(events[:, 2] == condition3)[0]
+    idx4 = np.where(events[:, 2] == condition4)[0]
+    idx5 = np.where(events[:, 2] == condition5)[0]
+    D = Y[idx5, :, :].mean(axis=0) - Y[idx2, :, :].mean(axis=0)
+    D_multi = np.asarray([Y[idx1, :, :].mean(axis=0), Y[idx2, :, :].mean(axis=0), Y[idx3, :, :].mean(axis=0), Y[idx4, :, :].mean(axis=0), Y[idx5, :, :].mean(axis=0)])    # compute the difference between conditions
     Y, D = Y.T, D.T  # shape must be in shape (n_times, n_chans[, n_trials])
     c0, nc0 = tscov(Y)
-    c1, nc1 = tscov(D)
+    c1, nc1 = tscov(D_multi)
     c0 /= nc0  # divide by total weight to normalize
     c1 /= nc1
     to_jd2, from_jd2, _, pwr = dss0(c0, c1, keep1=keep)  # compute the transformations
@@ -44,17 +48,19 @@ with open(DIR / "analysis" / "preproc_config.json") as file:
 ids_VE = list(name for name in os.listdir(VE_DIR) if os.path.isdir(os.path.join(VE_DIR, name)))
 ids_PN = list(name for name in os.listdir(PN_DIR) if os.path.isdir(os.path.join(PN_DIR, name)))
 ids = list(set(ids_VE) & set(ids_PN))
-condition_1 = 1
-condition_2 = 2
-condition_3 = 3
-condition_4 = 4
-condition_5 = 5
-keep = 12
+condition1 = 1
+condition2 = 2
+condition3 = 3
+condition4 = 4
+condition5 = 5
+keep = 3
 # initialise evokeds and related objects
 evokeds, evokeds_avrgd, evokeds_data = cfg["epochs"][f"event_id_{experiment}"].copy(
     ), cfg["epochs"][f"event_id_{experiment}"].copy(), cfg["epochs"][f"event_id_{experiment}"].copy()
 for key in cfg["epochs"][f"event_id_{experiment}"]:
     evokeds[key], evokeds_avrgd[key], evokeds_data[key] = list(), list(), list()
+
+channel_weights_all = []
 
 for id in ids:
     epochs_folder_VE = VE_DIR / id / "epochs"
@@ -67,6 +73,8 @@ for id in ids:
     # epochs_VE.crop(tmin=0.2, tmax=0.3)
     to_jd1, from_jd1, to_jd2, from_jd2 = compute_transformation(epochs_VE, condition_5, condition_1, keep)
     Y = apply_transform(epochs_PN.get_data(), [to_jd1, to_jd2, from_jd2, from_jd1])
+    channel_weights = from_jd2 @ from_jd1
+    channel_weights_all.append(channel_weights)
     epochs_PN_jd = epochs_PN.copy()
     epochs_PN_jd._data = Y
     evoked = [epochs_PN_jd[condition].average()
