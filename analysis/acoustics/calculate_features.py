@@ -58,11 +58,13 @@ def get_duration(file_path):
     sound = slab.Sound(file_path)
     return sound.duration
 
+
 def get_speactral_feature(file_path, feature_name):
     sound = slab.Sound(file_path)
     feature = np.asarray(sound.spectral_feature(feature_name))
     feature_avg = feature.mean()
     return feature_avg
+
 
 def get_vocoding_bandwidth(file_path):
     bandwidth = None
@@ -80,7 +82,6 @@ def get_vocalist(file_path):
     if vocalist_string:
         vocalist = int(re.findall('\d+', vocalist_string)[0])
     return vocalist
-
 
 
 vocoded_file_paths = [f for f in get_file_paths(vocoded_directory)]
