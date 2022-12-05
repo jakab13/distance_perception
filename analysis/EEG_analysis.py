@@ -65,6 +65,7 @@ mne.viz.plot_compare_evokeds([
     show_sensors='upper right'
 )
 
+
 # mne.viz.plot_compare_evokeds([
 #     control,
 #     distance_all
