@@ -8,34 +8,67 @@ import matplotlib.pyplot as plt
 plt.style.use(['seaborn-colorblind', 'seaborn-darkgrid'])
 
 DIR = pathlib.Path(os.getcwd())
-
-folder_name = '2022_02_04_pinknoise_jakab'
+folder_name = 'pilot/6hz79j'
 folder_path = DIR / 'analysis' / 'data' / folder_name
+
+print(folder_path)
 
 header_files = folder_path.glob('*.vhdr')
 raw_files = []
 
-for idx, header_file in enumerate(header_files):
-    raw_files.append(mne.io.read_raw_brainvision(header_file))
+for header_file in header_files:
+    raw_files.append(mne.io.read_raw_brainvision(header_file, preload=True))
 
-raw = mne.concatenate_raws(raw_files, verbose=True)
+raw = mne.concatenate_raws(raw_files)
+events = mne.events_from_annotations(raw)
+events = events[0]
 
-fs = raw.info['sfreq']
-# get hit rate for button presses
-# for every sweep onset, check if there was a button pressed within
-# a time window of ISI
-ISI = fs * 2
-event_arr = events[0]
-event_idx = event_arr[:, 2]
-event_times = event_arr[:, 0]
-sweep_times = event_times[np.where(event_idx == 1)]
-button_times = event_times[np.where(event_idx == 7)]
-hits = []
-misses = []
-for sweep_time in sweep_times:
-    interval = sweep_time + ISI  # ISI (2 sec interval after button press)
-    button_in_interval = np.where(np.logical_and(button_times >= sweep_time, button_times <= interval))
-    if button_in_interval is not None:
-        hits.append(sweep_time)
-    else:
-        misses.append(sweep_time)
+raw.filter(0.5, 40)
+
+ica = mne.preprocessing.ICA(n_components=0.99, method="fastica")
+ica.fit(raw)
+
+tmin = -0.3
+tmax = 0.7
+baseline = (-0.2, 0)
+drops = []
+reject_criteria = dict(eeg=200e-6)
+flat_criteria = dict(eeg=1e-6)
+event_id = {
+    'deviant': 1,
+    'control': 2,
+    'distance/2m': 3,
+    'distance/4m': 4,
+    'distance/8m': 5,
+    'distance/16m': 6,
+    'button_press': 7
+}
+epochs = mne.Epochs(raw, events, event_id, tmin, tmax, reject=reject_criteria, flat=flat_criteria,
+                    reject_by_annotation=True, baseline=baseline, preload=True)
+
+deviant = epochs['deviant'].average()
+control = epochs['control'].average()
+distance_all = epochs['distance'].average()
+distance_2m = epochs['distance/2m'].average()
+distance_4m = epochs['distance/4m'].average()
+distance_8m = epochs['distance/8m'].average()
+distance_16m = epochs['distance/16m'].average()
+
+mne.viz.plot_compare_evokeds([
+    # control,
+    distance_2m,
+    distance_4m,
+    distance_8m,
+    distance_16m
+    ],
+    legend='upper left',
+    show_sensors='upper right'
+)
+
+# mne.viz.plot_compare_evokeds([
+#     control,
+#     distance_all
+#     ],
+#     legend='upper left',
+#     show_sensors='upper right'
+# )
