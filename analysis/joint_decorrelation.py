@@ -41,7 +41,8 @@ def compute_transformation(epochs, conditions, keep, type="linear"):
         D = Y[idxs[-1], :, :].mean(axis=0) - Y[idxs[0], :, :].mean(axis=0)  # take the difference between two conditions
         D = D.T
     elif type == "linear":
-        D = np.asarray([Y[idx, :, :].mean(axis=0) for idx in idxs])  # linear combination of conditions
+        # D = np.asarray([Y[idx, :, :].mean(axis=0) for idx in idxs])  # linear combination of conditions
+        D = np.asarray([Y[idx, :, :].mean(axis=0) * (i-2) * (-50) for i, idx in enumerate(idxs)])
     Y = Y.T  # shape must be in shape (n_times, n_chans[, n_trials])
     c0, nc0 = tscov(Y)
     c1, nc1 = tscov(D)
@@ -90,7 +91,7 @@ ids_VE = list(name for name in os.listdir(VE_DIR) if os.path.isdir(os.path.join(
 ids_PN = list(name for name in os.listdir(PN_DIR) if os.path.isdir(os.path.join(PN_DIR, name)))
 ids = list(set(ids_VE) & set(ids_PN))
 condition_ids = [1, 2, 3, 4, 5]
-keep = 12
+keep = 10
 evokeds_to, evokeds_jd, evokeds_avrgd_to, evokeds_avrgd_jd = \
     cfg["epochs"][f"event_id_{experiment}"].copy(), \
     cfg["epochs"][f"event_id_{experiment}"].copy(), \
@@ -105,7 +106,7 @@ for id in ids:
     epochs_from = get_epochs(id, "vocal_effort")
     epochs_to = get_epochs(id, "pinknoise")
     # epochs_to = epochs_from
-    epochs_jd, to_jd1, from_jd1, to_jd2, from_jd2 = transform_epochs(epochs_from, epochs_to, condition_ids, keep, type="diff")
+    epochs_jd, to_jd1, from_jd1, to_jd2, from_jd2 = transform_epochs(epochs_from, epochs_to, condition_ids, keep, type="linear")
 
     evoked_jd = evoked_from_epochs(epochs_jd)
     evoked_from = evoked_from_epochs(epochs_from)
