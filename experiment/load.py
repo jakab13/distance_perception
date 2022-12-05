@@ -1,5 +1,6 @@
 import slab
 import pathlib
+import time
 import os
 import re
 from os import listdir
@@ -32,6 +33,7 @@ def load_deviant():
 
 
 def load_sounds(sound_type):
+    sound_type = sound_type
     loaded_sound_obj = {
         sound_type: {
         }
@@ -44,17 +46,17 @@ def load_sounds(sound_type):
     file_names.sort()
     for file_name in file_names:
         file_path = a_weighted_filepath / file_name
-        # sound = slab.Binaural(file_path)
+        if sound_type == 'USOs_resampled':
+            sound_id_string = file_name[file_name.find('300ms_') + len('300ms_'):file_name.rfind('_room')]
+            sound_id = int(re.findall('\d+', sound_id_string)[0])
+        else:
+            sound_id = 0
         distance_string = file_name[file_name.find('dist-') + len('dist-'):file_name.rfind('.wav')]
         distance = int(re.findall('\d+', distance_string)[0])
         if distance not in loaded_sound_obj[sound_type]:
-            loaded_sound_obj[sound_type][distance] = [file_path]
-        else:
-            loaded_sound_obj[sound_type][distance].append(file_path)
-
-    for distance in loaded_sound_obj[sound_type]:
-        sounds = slab.Precomputed([slab.Binaural(file_path) for file_path in loaded_sound_obj[sound_type][distance]])
-        loaded_sound_obj[sound_type][distance] = sounds
+            loaded_sound_obj[sound_type][distance] = {}
+        if sound_id not in loaded_sound_obj[sound_type][distance]:
+            loaded_sound_obj[sound_type][distance][sound_id] = slab.Binaural(file_path)
 
     loaded_sound_obj[sound_type]['controls'] = load_controls(sound_type)
     loaded_sound_obj[sound_type][0] = load_deviant()
