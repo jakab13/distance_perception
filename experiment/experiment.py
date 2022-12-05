@@ -5,13 +5,17 @@ experiment.initialise()
 
 participant_id = 'test'
 
-vocalist = Trials(sound_type="vocalist-11-short", participant_id=participant_id)
+noise = Trials(sound_type="pinknoise_ramped", participant_id=participant_id)
 
-vocalist.run(stage='training', playback_direction='away')
-vocalist.run(stage='training', playback_direction='toward')
+noise.run(stage='training', scale_type='log_5', playback_direction='away')
+noise.run(stage='training', scale_type='log_5', playback_direction='toward')
+noise.run(stage='training', scale_type='log_10', playback_direction='away')
+noise.run(stage='training', scale_type='log_10', playback_direction='toward')
 
-vocalist.run(stage='test', n_reps=4, record_response=True)
+noise.run(stage='test', n_reps=4, record_response=True)
 
-vocalist.play_deviant()
+noise.run_control(n_reps=60)
 
-vocalist.run(stage='experiment', n_reps=60)
+noise.play_deviant()
+
+noise.run(stage='experiment', scale_type='log_5', n_reps=60)
