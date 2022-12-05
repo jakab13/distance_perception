@@ -5,8 +5,9 @@
       <excludeFolder url="file://$MODULE_DIR$/analysis/data" />
       <excludeFolder url="file://$MODULE_DIR$/experiment/samples" />
       <excludeFolder url="file://$MODULE_DIR$/experiment/data" />
+      <excludeFolder url="file://$MODULE_DIR$/experiment/responses" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.8 (freefield) (2)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.10" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>
