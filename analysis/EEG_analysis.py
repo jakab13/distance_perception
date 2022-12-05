@@ -126,6 +126,7 @@ evoked.plot_image(mask=significant_points, show_names="all", titles="Distance_20
 #     title=participants_id
 # )
 
+
 # mne.viz.plot_compare_evokeds([
 #     control,
 #     distance_all
@@ -133,18 +134,3 @@ evoked.plot_image(mask=significant_points, show_names="all", titles="Distance_20
 #     legend='upper left',
 #     show_sensors='upper right'
 # )
-
-# fig = mne.viz.plot_events(events, event_id=event_id, sfreq=raw.info['sfreq'],
-#                           first_samp=raw.first_samp)
-#
-# evoked_diff_2m = mne.combine_evoked([control, distance_2m], weights=[1, -1])
-# evoked_diff_4m = mne.combine_evoked([control, distance_4m], weights=[1, -1])
-# evoked_diff_8m = mne.combine_evoked([control, distance_8m], weights=[1, -1])
-# evoked_diff_16m = mne.combine_evoked([control, distance_16m], weights=[1, -1])
-#
-# mne.viz.plot_compare_evokeds([
-#     evoked_diff_2m,
-#     evoked_diff_4m,
-#     evoked_diff_8m,
-#     evoked_diff_16m
-# ])
