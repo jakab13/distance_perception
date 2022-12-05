@@ -1,7 +1,8 @@
-/analysis/data/
-/experiment/samples/
+../analysis/data/
+../experiment/data/
+../experiment/samples/
 **/.idea/workspace.xml
 */.idea/tasks.xml
 **/.idea/distance_perception.iml
 **/.idea/misc.xml
-/experiment/responses/
+../experiment/responses/
