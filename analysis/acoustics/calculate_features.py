@@ -12,7 +12,6 @@ from librosa.feature import spectral_centroid
 
 SAMPLERATE = 44100
 slab.Signal.set_default_samplerate(SAMPLERATE)
-# DIR = pathlib.Path(__file__).parent.parent.absolute()
 DIR = pathlib.Path(os.getcwd())
 
 csv_file_name = 'features.csv'
@@ -40,7 +39,8 @@ USO_COLUMN_NAMES = [
     "onset_slope",
     "time_cog",
     "spectral_slope",
-    "centroid_control"
+    "centroid_control",
+    "onset_delay"
 ]
 
 vocoded_directory = DIR / 'experiment' / 'samples' / 'VEs' / 'vocoded'
@@ -100,9 +100,12 @@ def get_duration(file_path):
 
 def get_control_file_path(file_path):
     file_name = file_path.name
-    sub_string = file_name[:file_name.find("_dist")]
-    control_file_name = sub_string + "_control.wav"
-    control_file_path = file_path.parent / control_file_name
+    if "control" not in file_name:
+        sub_string = file_name[:file_name.find("_dist")]
+        control_file_name = sub_string + "_control.wav"
+        control_file_path = file_path.parent / control_file_name
+    else:
+        control_file_path = file_path
     return control_file_path
 
 
@@ -158,6 +161,13 @@ def get_time_cog(file_path, duration=1.0, resamplerate=48828):
     return cog
 
 
+def onset_delay(file_path):
+    sound = slab.Sound(file_path)
+    delay = next((i for i, x in enumerate(sound.data[:, 0]) if x), None)
+    delay_in_s = delay / sound.samplerate
+    return delay_in_s
+
+
 vocoded_file_paths = [f for f in get_file_paths(vocoded_directory)]
 features = {f.name: {} for f in get_file_paths(vocoded_directory)}
 
@@ -176,6 +186,7 @@ for USO_file_path in USO_file_paths:
     USO_features[USO_file_path.name]["spectral_slope"] = get_spectral_slope(USO_file_path)
     USO_features[USO_file_path.name]["time_cog"] = get_time_cog(USO_file_path)
     USO_features[USO_file_path.name]["centroid_control"] = get_spectral_feature(USO_file_path, "centroid", control=True)
+    USO_features[USO_file_path.name]["onset_delay"] = onset_delay(USO_file_path)
 
 for vocoded_file_path in vocoded_file_paths:
     features[vocoded_file_path.name] = {
@@ -198,5 +209,50 @@ df.to_csv(f'analysis/acoustics/{vocoded_directory.name}_features.csv')
 
 df = pd.DataFrame.from_dict(USO_features, columns=USO_COLUMN_NAMES, orient="index")
 df = df.round(decimals=5)
-df.to_csv('analysis/acoustics/USO_features.csv')
+df.to_csv('analysis/acoustics/USO_features_2.csv')
+
+df = pd.read_csv(DIR / 'analysis' / 'acoustics' / 'USO_features.csv')
+features_dict = df.to_dict()
+
+excludes = [
+    {"USO_id": 3, "condition": 4},
+    {"USO_id": 3, "condition": 5},
+    {"USO_id": 5, "condition": 5},
+    {"USO_id": 10, "condition": 2},
+    {"USO_id": 10, "condition": 3},
+    {"USO_id": 14, "condition": 5},
+    {"USO_id": 17, "condition": 1},
+    {"USO_id": 17, "condition": 3},
+    {"USO_id": 17, "condition": 4},
+    {"USO_id": 19, "condition": 3},
+    {"USO_id": 20, "condition": 4},
+    {"USO_id": 25, "condition": 2},
+    {"USO_id": 25, "condition": 3},
+    {"USO_id": 25, "condition": 4},
+    {"USO_id": 25, "condition": 5}
+]
+
+onset_delay_avg = {}
+for USO_idx, USO_id in features_dict["USO_id"].items():
+    dist_group = features_dict["dist_group"][USO_idx]
+    if dist_group == dist_group:
+        is_excluded = False
+        for exclude in excludes:
+            if exclude["USO_id"] == USO_id and exclude["condition"] == dist_group:
+                is_excluded = True
+                onset_delay_avg[USO_idx] = None
+        if not is_excluded:
+            dist_group_idxs = [k for k, v in features_dict["dist_group"].items() if v == dist_group]
+            group_idxs = [k for k, v in features_dict["USO_id"].items() if v == USO_id]
+            final_idxs = list(set(dist_group_idxs).intersection(group_idxs))
+            onset_delays = []
+            for idx in final_idxs:
+                onset_delays.append(features_dict["onset_delay"][idx])
+            onset_delay_avg[USO_idx] = np.asarray(onset_delays).mean()
+        else:
+            print("excluded", USO_idx)
+    else:
+        onset_delay_avg[USO_idx] = None
+
+df["onset_delay_avg"] = onset_delay_avg
 
