@@ -12,10 +12,10 @@ from pprint import pprint
 
 SAMPLERATE = 44100
 slab.Signal.set_default_samplerate(SAMPLERATE)
-DIR = pathlib.Path(__file__).parent.parent.absolute()
+DIR = pathlib.Path(os.getcwd())
 
-filename_core = 'final_USOs'
-folder_core = DIR / 'experiment' / 'samples' / 'USOs'/ filename_core
+filename_core = 'vocoded-11-reconstructed'
+folder_core = DIR / 'experiment' / 'samples' / 'VEs'/ filename_core
 simulated_folder_path = folder_core / 'simulated'
 aligned_folder_path = folder_core / 'aligned'
 a_weighted_folder_path = folder_core / 'a_weighted'
@@ -160,6 +160,9 @@ def play_normalised_seq(folder_path, duration=1.0, save=False):
         out.write(folder_path / 'stitched.wav', normalise=True)
 
 def plot_ve_envs(folder_path):
+    filename_core = 'vocoded-all-reconstructed-test'
+    folder_core = DIR / 'experiment' / 'samples' / 'VEs' / filename_core
+    folder_path = folder_core
     file_names = sorted(folder_path.glob('*.wav'))
     results = {1: {}, 2: {}, 3: {}, 4: {}, 5: {}}
     single_envs = dict()
@@ -175,6 +178,8 @@ def plot_ve_envs(folder_path):
         envs[i] = numpy.mean([results[i+1][key].data for id, key in enumerate(results[i+1])], axis=0)
     for i, key in enumerate(envs):
         plt.plot(numpy.mean(envs[i], axis=1), label="Vocal Effort {}".format(i+1))
+    plt.legend()
+    plt.show()
     plt.title("{} - Average sound energy".format(folder_path.parent.parent.name + "_" + folder_path.name))
     plt.xlabel('Time (s)')
     plt.ylabel('RMS (normalised)')
