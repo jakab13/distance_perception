@@ -135,7 +135,12 @@ def play_IACC_sequence(direction="away", n_reps=1, record_results=True):
         print("Playing IACC:", IACC_seq2.this_n + 1, "/", IACC_seq2.n_trials)
         sound.play()
         response = input()
-        IACC_seq2.add_response(response)
+        response_obj = {
+            "distance_group": distance_group,
+            "IACC_val": IACC_val,
+            "response": response
+        }
+        IACC_seq2.add_response(response_obj)
     if record_results:
         file.write(IACC_seq2, tag='IACC_distance')
 
@@ -151,8 +156,13 @@ for file_name in uso_seq:
     print("Playing IACC:", uso_seq.this_n + 1, "/", uso_seq.n_trials)
     sound.play()
     response = input()
-    # TODO add IACC value to the response
-    uso_seq.add_response(response)
+    pre_string = "late_"
+    IACC_val = file_name[file_name.find(pre_string) + len(pre_string):file_name.rfind('_az')]
+    response_obj = {
+        "IACC_val": IACC_val,
+        "response": response
+    }
+    uso_seq.add_response(response_obj)
 
 file.write(uso_seq, tag='stevens_scale')
 
@@ -189,3 +199,4 @@ play_IACC_sequence(direction="toward", record_results=False)
 # 5. Testing with IACC stimuli
 
 play_IACC_sequence(n_reps=10)
+
