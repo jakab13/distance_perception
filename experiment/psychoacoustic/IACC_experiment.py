@@ -12,7 +12,7 @@ import numpy
 
 #################################################################
 
-subject_id = 'test'
+subject_id = 'jakab2'
 uso_id = 2 # choose from 2, 3, 5, 7, 10, 11, 14, 17, 18, 19, 20, 21, 22, 25, 27, 28
 
 #################################################################
@@ -21,7 +21,7 @@ slab.set_default_samplerate(44100)
 DIR = pathlib.Path(os.getcwd())
 
 IACC_folder_path = DIR / 'experiment' / 'samples' / 'IACC_auralizations' / 'frontal'
-castanets_folder_path = DIR / 'experiment' / 'samples' / 'IACC_auralizations' / 'room-large_castanets'
+# castanets_folder_path = DIR / 'experiment' / 'samples' / 'IACC_auralizations' / 'room-large_castanets'
 bark_folder_path = DIR / 'experiment' / 'samples' / 'bark_room-10-30-3' / 'normalised'
 dunk_folder_path = DIR / 'experiment' / 'samples' / 'dunk_room-10-30-3' / 'normalised'
 bum_folder_path = DIR / 'experiment' / 'samples' / 'bum_room-10-30-3' / 'normalised'
@@ -74,9 +74,9 @@ ISI = 2.0
 IACC_file_names = [f for f in listdir(IACC_folder_path)
               if isfile(join(IACC_folder_path, f))
               and not f.startswith('.')]
-castanets_file_names = [f for f in listdir(castanets_folder_path)
-              if isfile(join(castanets_folder_path, f))
-              and not f.startswith('.')]
+# castanets_file_names = [f for f in listdir(castanets_folder_path)
+#               if isfile(join(castanets_folder_path, f))
+#               and not f.startswith('.')]
 bark_file_names = [f for f in listdir(bark_folder_path)
               if isfile(join(bark_folder_path, f))
               and not f.startswith('.')]
