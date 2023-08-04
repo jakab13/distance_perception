@@ -1,0 +1,67 @@
+{
+  "filtering": {
+    "highpass": 1,
+    "lowpass": 40,
+    "notch": null,
+    "nfft": 400
+  },
+  "epochs": {
+    "event_id_noise": {
+      "deviant": 1,
+      "control": 2,
+      "distance/20": 3,
+      "distance/200": 4,
+      "distance/1000": 5,
+      "distance/2000": 6,
+      "button_press": 7
+    },
+    "event_id_vocal_effort": {
+      "deviant": 6,
+      "vocal_effort/1": 1,
+      "vocal_effort/2": 2,
+      "vocal_effort/3": 3,
+      "vocal_effort/4": 4,
+      "vocal_effort/5": 5,
+      "button_press": 7
+    },
+    "event_id_pinknoise": {
+      "deviant": 6,
+      "pinknoise/1": 1,
+      "pinknoise/2": 2,
+      "pinknoise/3": 3,
+      "pinknoise/4": 4,
+      "pinknoise/5": 5
+    },
+    "tmin": -0.2,
+    "tmax": 1.0,
+    "detrend": null,
+    "baseline": null
+  },
+  "ica": {
+    "n_components": 0.999,
+    "method": "fastica",
+    "threshold": 0.75,
+    "reference": "reference_ica.fif"
+  },
+  "autoreject": {
+    "n_interpolate": [1, 4, 8, 16],
+    "cv": 10,
+    "thresh_method": "bayesian optimization",
+    "n_jobs": -1,
+    "random_state": null
+  },
+  "reref": {
+    "ransac": {
+      "n_resample": 50,
+      "min_channels": 0.25,
+      "min_corr": 0.75,
+      "unbroken_time": 0.4,
+      "n_jobs": -1
+    },
+    "type": "average",
+    "plot": true
+  },
+  "montage": {
+    "name": "AS-96_REF.bvef"
+  }
+}
