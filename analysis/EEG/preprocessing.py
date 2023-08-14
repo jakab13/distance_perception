@@ -7,7 +7,8 @@ import mne
 import numpy as np
 import pathlib
 import os
-# %matplotlib qt
+from meegkit.dss import dss_line_iter
+# %matplotlib
 _scaling = 10**6
 
 # TODO: fix notch filter in filtering function (zapline? Doesnt work ATM).
@@ -57,9 +58,10 @@ def filtering(data, notch=None, highpass=None, lowpass=None):
     if notch is not None:  # ZapLine Notch filter
         X = data.get_data().T
         # remove power line noise with the zapline algorithm
-        X, _ = dss_line_iter(X, fline=cfg["filtering"]["notch"],
+        X, iterations = dss_line_iter(X, fline=cfg["filtering"]["notch"],
                              sfreq=data.info["sfreq"],
                              nfft=cfg["filtering"]["nfft"])
+        print("Iterations:", iterations)
         data._data = X.T  # put the data back into variable
         del X
     if lowpass is not None:
@@ -79,7 +81,7 @@ def filtering(data, notch=None, highpass=None, lowpass=None):
     if notch is not None:
         fig.savefig(
             fig_folder / pathlib.Path("ZapLine_filter.pdf"), dpi=800)
-    # plt.close()
+    plt.close()
     return data
 
 
@@ -251,17 +253,16 @@ def apply_ICA(epochs, reference, n_components=None, method="fastica",
 if __name__ == "__main__":
     experiment = "vocal_effort"  # "vocal_effort" or "noise" data.
     DIR = pathlib.Path(os.getcwd())
-    with open(DIR / "analysis" / "preproc_config.json") as file:
+    with open(DIR / "analysis" / "EEG" / "preproc_config.json") as file:
         cfg = json.load(file)
-    with open(DIR / "analysis" / "mapping.json") as file:
+    with open(DIR / "analysis" / "EEG" / "mapping.json") as file:
         mapping = json.load(file)
     # get pilot folder directories.
-    data_DIR = DIR / "analysis" / "data" / f"{experiment}"
-    fig_path = DIR / "analysis" / "figures" / f"{experiment}"
+    data_DIR = DIR / "analysis" / "EEG" / "data" / f"{experiment}"
+    fig_path = DIR / "analysis" / "EEG" / "figures" / f"{experiment}"
     # get subject ids
     ids = list(name for name in os.listdir(data_DIR)
                if os.path.isdir(os.path.join(data_DIR, name)))
-    ids = ["zx4v7q"]
     # STEP 1: make raw.fif files and save them into raw_folder.
     for id in ids:  # Iterate through subjects.
         id = ids[0]
@@ -285,7 +286,7 @@ if __name__ == "__main__":
         # Add reference electrode.
         raw.add_reference_channels('FCz')
         # Use BrainVision montage file to specify electrode positions.
-        montage_path = DIR / "analysis" / cfg["montage"]["name"]
+        montage_path = DIR / "analysis" / "EEG" / cfg["montage"]["name"]
         montage = mne.channels.read_custom_montage(fname=montage_path)
         raw.set_montage(montage)
         raw.save(raw_folder / pathlib.Path(id + "_raw.fif"), overwrite=True)
@@ -308,7 +309,7 @@ if __name__ == "__main__":
             unbroken_time=cfg["reref"]["ransac"]["unbroken_time"],
             plot=cfg["reref"]["plot"])
         # STEP 4: apply ICA for blink and saccade artifact rejection.
-        reference_path = DIR / "analysis" / cfg["ica"]["reference"]
+        reference_path = DIR / "analysis" / "EEG" / cfg["ica"]["reference"]
         epochs_ica = apply_ICA(epochs_ref, reference=reference_path,
                                n_components=cfg["ica"]["n_components"],
                                threshold=cfg["ica"]["threshold"],

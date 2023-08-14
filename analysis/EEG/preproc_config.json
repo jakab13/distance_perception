@@ -1,8 +1,8 @@
 {
   "filtering": {
     "highpass": 1,
-    "lowpass": 40,
-    "notch": null,
+    "lowpass": null,
+    "notch": 50,
     "nfft": 400
   },
   "epochs": {
