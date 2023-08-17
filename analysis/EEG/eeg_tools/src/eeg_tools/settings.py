@@ -40,7 +40,7 @@ try:
 except:
     print("Electrode montage not found. Be sure that EEG data and montage file are stored the entered path.")
 try:
-    header_files = utils.find(path=data_dir, mode="pattern", pattern="*.vhdr")
+    header_files = sorted(utils.find(path=data_dir, mode="pattern", pattern="*.vhdr"))
 except:
     print("VHDR files not found. Be sure that EEG data are stored the entered path.")
 try:

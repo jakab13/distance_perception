@@ -95,7 +95,7 @@ def make_raw(header_files, id, fig_folder, mapping, montage, ref_ch="FCz",
     _fig_folder = fig_folder
     raw_files = []
     for header_file in header_files:
-        if id in header_file:
+        if id in header_file.stem and "block" in header_file.stem:
             raw_files.append(mne.io.read_raw_brainvision(
                 header_file, preload=preload))  # read BrainVision files.
     raw = mne.concatenate_raws(raw_files)  # make raw files

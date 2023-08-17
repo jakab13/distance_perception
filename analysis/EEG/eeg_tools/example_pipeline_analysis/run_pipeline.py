@@ -16,9 +16,9 @@ for id in settings.ids[:1]:  # loop through all ids
         # utils.generate_folders(root_dir=settings.data_dir, id=id)  # make data folders
         raw_folder = pathlib.Path(f"/Users/jakabpilaszanovich/Documents/GitHub/distance_perception/analysis/EEG/data/pinknoise/{id}/raw")
         fig_folder = pathlib.Path(f"/Users/jakabpilaszanovich/Documents/GitHub/distance_perception/analysis/EEG/data/pinknoise/{id}/figures")
-        # raw = pre.make_raw(settings.header_files, id, fig_folder, settings.mapping, settings.montage)  # make raw object
-        # utils.save_object(raw, settings.root_dir, id)  # save raw
-        raw = pre.read_raw(raw_folder, id)
+        raw = pre.make_raw(settings.header_files, id, fig_folder, settings.mapping, settings.montage)  # make raw object
+        utils.save_object(raw, settings.data_dir, id)  # save raw
+        # raw = pre.read_raw(raw_folder, id)
         epochs = pre.run_pipeline(raw=raw, fig_folder=fig_folder, config=settings.cfg, exclude_event_id=7)  # run pipeline on raw
         del raw  # save working memory
         utils.save_object(epochs, settings.data_dir, id)  # save epochs

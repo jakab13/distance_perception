@@ -16,12 +16,12 @@ def find(path, mode="pattern", pattern=None, string=None):
     if mode == "string":
         for root, dirs, files in os.walk(path):
             if string in files:
-                found_files.append(os.path.join(root, string))
+                found_files.append(pathlib.Path(os.path.join(root, string)))
     if mode == "pattern":
         for root, dirs, files in os.walk(path):
             for name in files:
                 if fnmatch.fnmatch(name, pattern):
-                    found_files.append(os.path.join(root, name))
+                    found_files.append(pathlib.Path(os.path.join(root, name)))
     if len(found_files) == 1:
         return found_files[0]
     else:
@@ -86,17 +86,15 @@ def save_object(data, root_dir, id, overwrite=True):
     if isinstance(data, mne.io.brainvision.brainvision.RawBrainVision):
         folder_path = pathlib.Path(root_dir) / id / "raw"
         data.save(f"{folder_path}/{id}_raw.fif", overwrite=overwrite)
-    if isinstance(data, mne.Epochs):
+    elif isinstance(data, mne.Epochs):
         folder_path = pathlib.Path(root_dir) / id / "epochs"
         data.save(f"{folder_path}/{id}-epo.fif", overwrite=overwrite)
-    if isinstance(data, mne.Evoked) or isinstance(data, list):
-        folder_path = pathlib.Path(root_dir) / id / "evokeds"
-        if isinstance(data, list):
-            mne.write_evokeds(
-                f"{folder_path}/{id}-ave.fif", data, overwrite=overwrite)
-        else:
-            data.save(f"{folder_path}/{id}-ave.fif",
-                      overwrite=overwrite)
+    # elif isinstance(data, mne.Evoked) or isinstance(data, list):
+    #     file_path = pathlib.Path(str(root_dir + id + "/evokeds/" + id + "-ave.fif"))
+    #     if isinstance(data, list):
+    #         mne.write_evokeds(f"{file_path}", data)
+    #     else:
+    #         data.save(f"{folder_path}/{id}-ave.fif", overwrite=overwrite)
     else:
         print("Data needs to be an mne object of type mne.io.Raw, mne.Epochs or mne.Evoked!")
 
