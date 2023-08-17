@@ -251,7 +251,7 @@ def apply_ICA(epochs, reference, n_components=None, method="fastica",
 
 
 if __name__ == "__main__":
-    experiment = "vocal_effort"  # "vocal_effort" or "noise" data.
+    experiment = "pinknoise"  # "vocal_effort" or "noise" data.
     DIR = pathlib.Path(os.getcwd())
     with open(DIR / "analysis" / "EEG" / "preproc_config.json") as file:
         cfg = json.load(file)
@@ -265,8 +265,8 @@ if __name__ == "__main__":
                if os.path.isdir(os.path.join(data_DIR, name)))
     # STEP 1: make raw.fif files and save them into raw_folder.
     for id in ids:  # Iterate through subjects.
-        id = ids[0]
-        folder_path = data_DIR / id
+        # id = ids[0]
+        folder_path = data_DIR / id / "raw_brainvision"
         header_files = folder_path.glob("*.vhdr")
         raw_files = []
         for header_file in header_files:
@@ -275,7 +275,7 @@ if __name__ == "__main__":
         raw = mne.concatenate_raws(raw_files)  # make raw files
         # make folders for different file types + preprocessing figures.
         epochs_folder = data_DIR / id / "epochs"
-        raw_folder = data_DIR / id / "raw_data"
+        raw_folder = data_DIR / id / "raw"
         fig_folder = fig_path / id
         evokeds_folder = data_DIR / id / "evokeds"
         for folder in epochs_folder, raw_folder, fig_folder, evokeds_folder:
