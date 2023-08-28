@@ -89,12 +89,12 @@ def save_object(data, root_dir, id, overwrite=True):
     elif isinstance(data, mne.Epochs):
         folder_path = pathlib.Path(root_dir) / id / "epochs"
         data.save(f"{folder_path}/{id}-epo.fif", overwrite=overwrite)
-    # elif isinstance(data, mne.Evoked) or isinstance(data, list):
-    #     file_path = pathlib.Path(str(root_dir + id + "/evokeds/" + id + "-ave.fif"))
-    #     if isinstance(data, list):
-    #         mne.write_evokeds(f"{file_path}", data)
-    #     else:
-    #         data.save(f"{folder_path}/{id}-ave.fif", overwrite=overwrite)
+    elif isinstance(data, mne.Evoked) or isinstance(data, list):
+        file_path = pathlib.Path(str(root_dir + "/" + id + "/evokeds/"))
+        if isinstance(data, list):
+            mne.write_evokeds(f"{file_path}/{id}-ave.fif", data)
+        else:
+            data.save(f"{file_path}/{id}-ave.fif", overwrite=overwrite)
     else:
         print("Data needs to be an mne object of type mne.io.Raw, mne.Epochs or mne.Evoked!")
 

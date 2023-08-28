@@ -9,7 +9,7 @@ import settings
 
 
 # TODO: position _fig_folder somewhere else and make it more dynamic.
-for id in settings.ids[:1]:  # loop through all ids
+for id in settings.ids[23:24]:  # loop through all ids
     is_preprocessed = False  # set.check_id(id, settings.root_dir)  # check if subject is already preprocessed
     if is_preprocessed is False:  # if not preprocessed, run loop
         print(f"START PREPROCESSING PARTICIPANT {settings.ids.index(id)} ({id})")
@@ -25,8 +25,8 @@ for id in settings.ids[:1]:  # loop through all ids
         evokeds = pre.make_evokeds(epochs, baseline=(None, 0))  # make evokeds, optionally apply baseline
         utils.save_object(evokeds, settings.data_dir, id)  # save evokeds
         del epochs, evokeds  # save working memory
-        with open(settings.data_dir / id / f"config_{id}.txt", "w") as file:
-            file.write(str(settings.cfg))  # save configuration file to keep track of the parameters per subject
+        # with open(settings.data_dir / id / f"config_{id}.txt", "w") as file:
+        #     file.write(str(settings.cfg))  # save configuration file to keep track of the parameters per subject
         print(f"PARTICIPANT {settings.ids.index(id)} ({id}) SUCCESSFULLY PREPROCESSED!")
     else:
         continue
