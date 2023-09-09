@@ -5,9 +5,11 @@ import matplotlib.pyplot as plt
 import pathlib
 import numpy
 
+subject_ID = "oskar"
+
 slab.set_default_samplerate(44100)
 results_folder = "/Users/jakabpilaszanovich/Documents/GitHub/distance_perception/experiment/psychoacoustic/reverb_equality/results"
-results_file = slab.ResultsFile(subject='marc', folder=results_folder)
+results_file = slab.ResultsFile(subject=subject_ID, folder=results_folder)
 
 folder_path = pathlib.Path("/Users/jakabpilaszanovich/Documents/GitHub/distance_perception") / "experiment" / 'samples' / "clap2" / "simulated"
 
@@ -27,11 +29,14 @@ def _on_key(event):
     fig_key = event.key
     if fig_key == "1" and t60_index < len(t60s) - 1:
         t60_index += 1
+        results_file.write(t60_index, tag="t60_index")
     elif fig_key == "9" and t60_index > 1:
         t60_index -= 1
+        results_file.write(t60_index, tag="t60_index")
 
-ref_t60 = 1.5
+ref_t60 = 1
 ref_sound = sounds_by_t60[ref_t60]
+ref_sound.data = ref_sound.data[:88200]
 tone = slab.Sound.tone(frequency=500, duration=0.05)
 
 seq = slab.Trialsequence(conditions=5)
@@ -41,12 +46,16 @@ for trial in seq:
     t60_index = t60s.index(seed_t60)
     fig = plt.figure()
     _ = fig.canvas.mpl_connect('key_press_event', _on_key)
-    ref_sound.play()
+    trial = 0
     while fig_key != "c":
+        trial += 1
         fig_key = None
         plt.pause(0.01)
         print("Updated t60:", str(t60s[t60_index]) + "s", "(" + str(fig_key) + ")")
+        results_file.write(trial, tag="trial")
         curr_sound = sounds_by_t60[t60s[t60_index]]
+        # curr_sound.data = curr_sound.data[:88200]
+        ref_sound.play()
         reversed_sound = slab.Sound(numpy.flipud(curr_sound.data), samplerate=curr_sound.samplerate)
         reversed_sound.play()
     results_file.write(t60s[t60_index], tag="reverse_t60")
