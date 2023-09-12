@@ -121,3 +121,8 @@ sim_sound.data = sim_sound.data[:, np.newaxis]
 sim_fbank = slab.Filter.cos_filterbank(length=sim_sound.n_samples, bandwidth=1) # make the filter bank
 sim_subbands = sim_fbank.apply(sim_sound)
 sim_envs = sim_subbands.envelope()
+
+for i in range(1, sim_subbands.n_channels):
+    sim_subband = sim_subbands[:, i]
+    rt60 = measure_rt60(sim_subband, decay_db=15, plot=True)
+    print(rt60)
