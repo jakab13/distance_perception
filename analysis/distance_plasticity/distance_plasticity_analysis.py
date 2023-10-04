@@ -1,136 +1,159 @@
-import pandas as pd
-import slab
-import pathlib
 import os
+import pathlib
 import seaborn as sns
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
-import scipy
 import numpy as np
-from sklearn.metrics import mean_squared_error
+import scipy
+from sklearn.metrics import mean_squared_error, mean_absolute_error
+from analysis.distance_plasticity.utils import load_df, phase_to_text
 
-results_folder = pathlib.Path(os.getcwd()) / "analysis" / "distance_plasticity" / "results"
+folder_path = pathlib.Path(os.getcwd()) / "analysis" / "distance_plasticity"
 
-subjects_excl = ["sub_01", "sub_02", "sub_03", "sub_04", "varvara"]
+df_distance_discrimination, df_visual_mapping = load_df()
 
-subjects = [s for s in os.listdir(results_folder) if not s.startswith('.')]
-subjects = [s for s in subjects if not any(s in excl for excl in subjects_excl)]
-
-results_files = {s: [f for f in sorted(os.listdir(results_folder / s)) if not f.startswith('.')] for s in subjects}
-
-visual_mapping_columns = ["subject_ID", "visual_obj_dist", "slider_val", "slider_ratio", "slider_dist", "response_time"]
-distance_discrimination_columns = ["subject_ID", "block", "spk_dist", "channel", "slider_val", "slider_ratio", "slider_dist", "response_time", "USO_file_name"]
-reverb_pse_columns = ["subject_ID", "block", "start_reverse_t60", "end_reverse_t60", "n_loop", "n_ref_played"]
-
-df_visual_mapping = pd.DataFrame(columns=visual_mapping_columns)
-df_distance_discrimination = pd.DataFrame(columns=distance_discrimination_columns)
-dr_reverb_pse = pd.DataFrame(columns=reverb_pse_columns)
-
-for subject, results_file_list in results_files.items():
-    distance_discrimination_block_counter = 0
-    reverb_pse_block_counter = 0
-    for results_file_name in results_file_list:
-        print(results_file_name)
-        path = results_folder / subject / results_file_name
-        stage = slab.ResultsFile.read_file(path, tag="stage")
-        df_curr = pd.DataFrame()
-        if stage == "visual_mapping":
-            df_curr["subject_ID"] = [subject for _ in range(len(slab.ResultsFile.read_file(path, tag="visual_obj_dist")))]
-            df_curr["visual_obj_dist"] = slab.ResultsFile.read_file(path, tag="visual_obj_dist")
-            df_curr["slider_val"] = slab.ResultsFile.read_file(path, tag="slider_val")
-            df_curr["slider_ratio"] = slab.ResultsFile.read_file(path, tag="slider_ratio")
-            df_curr["slider_dist"] = slab.ResultsFile.read_file(path, tag="slider_dist")
-            df_curr["response_time"] = slab.ResultsFile.read_file(path, tag="response_time")
-            df_visual_mapping = pd.concat([df_visual_mapping, df_curr], ignore_index=True)
-        if stage == "distance_discrimination_task":
-            block_length = slab.ResultsFile.read_file(path, tag="seq")["n_trials"]
-            df_curr["idx"] = range(block_length)
-            df_curr["subject_ID"] = [subject for _ in range(block_length)]
-            df_curr["block"] = [distance_discrimination_block_counter for _ in range(block_length)]
-            df_curr["spk_dist"] = slab.ResultsFile.read_file(path, tag="spk_dist")
-            df_curr["channel"] = slab.ResultsFile.read_file(path, tag="channel")
-            df_curr["slider_val"] = slab.ResultsFile.read_file(path, tag="slider_val")
-            df_curr["slider_ratio"] = slab.ResultsFile.read_file(path, tag="slider_ratio")
-            df_curr["slider_dist"] = slab.ResultsFile.read_file(path, tag="slider_dist")
-            df_curr["response_time"] = slab.ResultsFile.read_file(path, tag="response_time")
-            df_curr["USO_file_name"] = slab.ResultsFile.read_file(path, tag="USO_file_name")
-            df_distance_discrimination = pd.concat([df_distance_discrimination, df_curr], ignore_index=True)
-            distance_discrimination_block_counter += 1
-        if stage == "reverb_pse":
-            block_length = len(slab.ResultsFile.read_file(path, tag="start_reverse_t60"))
-            df_curr["subject_ID"] = [subject for _ in range(block_length)]
-            df_curr["block"] = [reverb_pse_block_counter for _ in range(block_length)]
-            df_curr["start_reverse_t60"] = slab.ResultsFile.read_file(path, tag="start_reverse_t60")
-            df_curr["end_reverse_t60"] = slab.ResultsFile.read_file(path, tag="end_reverse_t60")
-            df_curr["n_loop"] = slab.ResultsFile.read_file(path, tag="n_loop")
-            df_curr["n_ref_played"] = slab.ResultsFile.read_file(path, tag="n_ref_played")
-            dr_reverb_pse = pd.concat([dr_reverb_pse, df_curr], ignore_index=True)
-            reverb_pse_block_counter += 1
-
-df_distance_discrimination["block"].replace(2, 1, inplace=True)
-df_distance_discrimination["block"].replace(3, 2, inplace=True)
-df_distance_discrimination["block"].replace(4, 2, inplace=True)
-df_distance_discrimination["block"].replace(5, 3, inplace=True)
-df_distance_discrimination["block"].replace(6, 3, inplace=True)
-
-df_distance_discrimination = df_distance_discrimination[df_distance_discrimination["response_time"].between(0.3, 10)]
-
-df_distance_discrimination["dist_diff"] = (df_distance_discrimination["slider_dist"] - df_distance_discrimination["spk_dist"]).astype('float64')
-df_distance_discrimination["dist_diff_2"] = df_distance_discrimination["dist_diff"]**2
-
-df_visual_mapping["dist_diff"] = (df_visual_mapping["slider_dist"] - df_visual_mapping["visual_obj_dist"]).astype('float64')
-df_visual_mapping["dist_diff_2"] = df_visual_mapping["dist_diff"]**2
-
-subjects = df_distance_discrimination["subject_ID"].unique()
-
-print(df_distance_discrimination)
+subjects = df_distance_discrimination.subject_ID.unique()
+spk_dists = sorted(df_distance_discrimination.spk_dist.unique())
 
 visual_mapping_plot = sns.regplot(data=df_visual_mapping, x="visual_obj_dist", y="slider_dist")
 visual_mapping_plot.set(title="Visual mapping")
 
-# Distribution of distance estimation as a function of subject
-df_distance_discrimination.hist(column="dist_diff", by="spk_dist", bins=50, sharex=True, xrot=90, layout=(11, 1))
+# Distribution of distance estimation as a function of speaker distance
+fig, ax = plt.subplots(nrows=len(spk_dists), ncols=1, sharex=True)
+for spk_idx, spk_dist in enumerate(spk_dists):
+    df = df_distance_discrimination[df_distance_discrimination.spk_dist == spk_dist]
+    df.hist(column="signed_err", bins=50, xrot=90, ax=ax[spk_idx])
+    ax[spk_idx].set_title(str(spk_dist) + "m")
+    ax[spk_idx].grid = False
+fig.suptitle("Signed error distribution at different distances")
 
-# Distribution of response times as a function subject
+# Distribution of response times as a function of subject
 df_distance_discrimination.hist(column="response_time", by="subject_ID", bins=50, sharex=True, xrot=90, layout=(len(subjects), 1))
 
+# Distribution of response times at different blocks as a function of subject
+fig, ax = plt.subplots(nrows=len(subjects), ncols=1, sharex=True)
+for subject_idx, subject in enumerate(sorted(subjects)):
+    df = df_distance_discrimination[df_distance_discrimination["subject_ID"] == subject]
+    sns.kdeplot(data=df, x="response_time", hue="block", ax=ax[subject_idx], common_norm=False, fill=True, palette="crest", alpha=.5, linewidth=0)
+    ax[subject_idx].get_legend().remove()
+    ax[subject_idx].set_title(subject)
+
+# Distribution of signed error at different distances and blocks
 fig, ax = plt.subplots(nrows=11, ncols=1, sharex=True)
 for spk_idx, spk_dist in enumerate(sorted(df_distance_discrimination["spk_dist"].unique())):
     df = df_distance_discrimination[df_distance_discrimination["spk_dist"] == spk_dist]
-    sns.kdeplot(data=df, x="dist_diff", hue="block", ax=ax[spk_idx], common_norm=False, fill=True, palette="crest", alpha=.5, linewidth=0)
+    sns.kdeplot(data=df, x="signed_err", hue="block", ax=ax[spk_idx], common_norm=False, fill=True, palette="crest", alpha=.5, linewidth=0)
     ax[spk_idx].get_legend().remove()
     ax[spk_idx].set_title(str(spk_dist))
 
-df_visual_mapping.hist(column="dist_diff", by="visual_obj_dist", bins=20, sharex=True, xrot=90, layout=(10, 1))
+# Absolute error at different blocks
+sns.pointplot(data=df_distance_discrimination, x="block", y="absolute_err", errorbar="se")
+plt.xlabel("Phase")
+plt.ylabel("Absolute Error (m)")
+plt.xticks([0, 1, 2, 3], ["Pre", "Post-1", "Post-2", "Post-3"])
+plt.title("Mean absolute error before/after training sessions")
+
+# Absolute error at different blocks per subject
+sns.pointplot(data=df_distance_discrimination, x="block", y="absolute_err", hue="subject_ID", errorbar="se")
+plt.xlabel("Phase")
+plt.ylabel("Absolute Error (m)")
+plt.xticks([0, 1, 2, 3], ["Pre", "Post-1", "Post-2", "Post-3"])
+plt.title("Mean absolute error before/after training sessions")
+
+for subject_idx, subject in enumerate(sorted(subjects)):
+    df_sub = df_distance_discrimination[df_distance_discrimination.subject_ID == subject]
+    # df_sub = df_distance_discrimination
+    # subject = "all subjects"
+    fig, ax = plt.subplots(nrows=1, ncols=len(df_sub.phase.unique()), sharex=True, sharey=True, figsize=(20, 4))
+    for phase in range(len(df_distance_discrimination.phase.unique())):
+        df = df_sub[df_distance_discrimination.phase == phase]
+        min = df_distance_discrimination.spk_dist.min()
+        max = df_distance_discrimination.spk_dist.max()
+        linreg = scipy.stats.linregress(df.spk_dist.dropna(), df.slider_dist.dropna())
+        sns.regplot(data=df, x="spk_dist", y="slider_dist", ax=ax[phase], scatter_kws={"alpha": 0.15})
+        ax[phase].plot(
+            np.arange(min, max + 1),
+            np.arange(min, max + 1),
+            color="grey", linestyle="--")
+        axis_title = phase_to_text(phase)
+        ax[phase].set_xlabel("Presented (m)")
+        ax[phase].set_ylabel("Perceived (m)")
+        ax[phase].set_xlim([1, 13])
+        ax[phase].set_ylim([1, 13])
+        ax[phase].set_title(phase_to_text(phase))
+        textstr = '\n'.join((
+            f'slope={linreg.slope:.2f}',
+            f'R2={linreg.rvalue**2:.2f}'))
+        ax[phase].text(0.05, 0.95, textstr, transform=ax[phase].transAxes, verticalalignment='top')
+    title = "Presented vs Perceived throughout training (" + subject + ")"
+    # plt.tight_layout()
+    fig.suptitle(title)
+    # plt.savefig(folder_path / "figures" / title, dpi=200, overwrite=True)
+    # plt.close()
+    plt.show()
+
+
+for subject_idx, subject in enumerate(sorted(subjects)):
+    df_sub = df_distance_discrimination[df_distance_discrimination["subject_ID"] == subject]
+    fig, ax = plt.subplots(nrows=1, ncols=len(df_sub["block"].unique()), sharex=True, sharey=True, figsize=(16, 6))
+    for block in range(len(df_distance_discrimination["block"].unique())):
+        ax[block].hlines(0, xmin=0, xmax=12, colors="grey", linestyles="--", alpha=0.5)
+        df = df_sub[df_sub["block"] == block]
+        mse = mean_squared_error(df['slider_dist'], df['spk_dist'])
+        mae = mean_absolute_error(df['slider_dist'], df['spk_dist'])
+        signed_err_mean = df["signed_err"].mean()
+        signed_err_std = df["signed_err"].std()
+
+        ax[block].hlines(signed_err_mean, xmin=0, xmax=11, colors="red", alpha=0.5)
+        std_line_top = (signed_err_mean + signed_err_std) * np.ones(11)
+        std_line_bottom = (signed_err_mean - signed_err_std) * np.ones(11)
+        ax[block].fill_between(np.arange(11), std_line_top, std_line_bottom, color="orange", alpha=0.1)
+        sns.pointplot(data=df, x="spk_dist", y="signed_err", ax=ax[block], errorbar="se")
+        match block:
+            case 0:
+                axis_title = "Pre"
+            case 1:
+                axis_title = "Post-1"
+            case 2:
+                axis_title = "Post-2"
+            case 3:
+                axis_title = "Post-3"
+        ax[block].set_xticks([0, 5, 10])
+        ax[block].set_xticklabels([2, 7.5, 12])
+        ax[block].set_title(axis_title + " " + "MSE=" + str(round(mse, 2)))
+        ax[block].set_xlabel("Speaker distance (m)")
+        ax[block].set_ylabel("Signed error (m)")
+        ax[block].set_ylim([-5, 5])
+    title = "Signed error vs Distance in different training phases (" + subject + ")"
+    fig.suptitle(title)
+    plt.savefig(folder_path / "figures" / title)
+    # plt.close(fig)
+    plt.show()
+
+df_visual_mapping.hist(column="signed_err", by="visual_obj_dist", bins=20, sharex=True, xrot=90, layout=(10, 1))
 
 distance_discrimination_plot = sns.regplot(data=df_distance_discrimination, x="spk_dist", y="slider_dist")
 
-# df_sub_1 = df_distance_discrimination[df_distance_discrimination["subject_ID"] == "sub_01"]
-#
-# ax = sns.boxplot(x='block', y='dist_diff', data=df_sub_1, color='#99c2a2')
-# ax = sns.stripplot(x="block", y="dist_diff", data=df_sub_1, color='#7d0013')
-# plt.show()
-
-ax = sns.boxplot(x='block', y='dist_diff', data=df_distance_discrimination, hue="subject_ID")
-ax = sns.stripplot(x='block', y='dist_diff', data=df_distance_discrimination, hue="subject_ID")
+ax = sns.boxplot(x='block', y='signed_err', data=df_distance_discrimination, hue="subject_ID")
+ax = sns.stripplot(x='block', y='signed_err', data=df_distance_discrimination, hue="subject_ID")
 
 fig, ax = plt.subplots()
-sns.boxplot(x='block', y='dist_diff', data=df_distance_discrimination, hue="subject_ID", ax=ax)
+sns.boxplot(x='block', y='signed_err', data=df_distance_discrimination, hue="subject_ID", ax=ax)
 for subject in subjects:
     df_subject = df_distance_discrimination[df_distance_discrimination["subject_ID"] == subject]
-    sns.regplot(x='block', y='dist_diff', data=df_subject, ax=ax, scatter=False)
+    sns.regplot(x='block', y='signed_err', data=df_subject, ax=ax, scatter=False)
 
-sns.lmplot(x='block', y='dist_diff', data=df_distance_discrimination, hue="subject_ID", scatter=False)
+sns.lmplot(x='block', y='signed_err', data=df_distance_discrimination, hue="subject_ID", scatter=False)
 
 # Ordinary Least Squares (OLS) model
 for subject in subjects:
     df_subject = df_distance_discrimination[df_distance_discrimination["subject_ID"] == subject]
-    model = smf.ols('dist_diff ~ C(block)', data=df_subject).fit()
+    model = smf.ols('signed_err ~ C(block)', data=df_subject).fit()
     mse = model.mse_resid
     # print("MSE", mse)
     anova_table = sm.stats.anova_lm(model, typ=2)
-    # linreg = scipy.stats.linregress(df_subject["block"], df_subject["dist_diff"])
+    # linreg = scipy.stats.linregress(df_subject["block"], df_subject["signed_err"])
     print("Subject:", subject)
     print("ANOVA", anova_table)
     # print("Linear regression", linreg.slope, linreg.rvalue, linreg.pvalue)
@@ -143,6 +166,6 @@ for subject in subjects:
         mse = mean_squared_error(df_block['slider_dist'], df_block['spk_dist'])
         print(block, mse)
 
-md = smf.mixedlm("dist_diff ~ C(block)", df_distance_discrimination, groups="subject_ID")
+md = smf.mixedlm("signed_err ~ C(block)", df_distance_discrimination, groups="subject_ID")
 mdf = md.fit()
 print(mdf.summary())
