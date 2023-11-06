@@ -40,7 +40,8 @@ USO_COLUMN_NAMES = [
     "time_cog",
     "spectral_slope",
     "centroid_control",
-    "onset_delay"
+    "onset_delay",
+    "rolloff"
 ]
 
 vocoded_directory = DIR / 'experiment' / 'samples' / 'VEs' / 'vocoded'
@@ -176,9 +177,9 @@ USO_features = {f.name: {USO_key: None for USO_key in USO_COLUMN_NAMES} for f in
 
 for USO_file_path in USO_file_paths:
     USO_features[USO_file_path.name]["USO_id"] = get_from_file_name(USO_file_path, "ms_")
-    USO_features[USO_file_path.name]["RMS"] = get_RMS(USO_file_path)
-    USO_features[USO_file_path.name]["LUFS"] = get_LUFS(USO_file_path)
-    USO_features[USO_file_path.name]["dbFS"] = get_dbFS(USO_file_path)
+    USO_features[USO_file_path.name]["RMS"] = get_RMS(USO_file_path, duration=1.0)
+    USO_features[USO_file_path.name]["LUFS"] = get_LUFS(USO_file_path, duration=1.0)
+    USO_features[USO_file_path.name]["dbFS"] = get_dbFS(USO_file_path, duration=1.0)
     USO_features[USO_file_path.name]["dist_group"] = get_USO_distance_group(USO_file_path)
     USO_features[USO_file_path.name]["centroid"] = get_spectral_feature(USO_file_path, "centroid", duration=1.0)
     USO_features[USO_file_path.name]["flatness"] = get_spectral_feature(USO_file_path, "flatness", duration=1.0)
@@ -187,6 +188,7 @@ for USO_file_path in USO_file_paths:
     USO_features[USO_file_path.name]["time_cog"] = get_time_cog(USO_file_path)
     USO_features[USO_file_path.name]["centroid_control"] = get_spectral_feature(USO_file_path, "centroid", control=True)
     USO_features[USO_file_path.name]["onset_delay"] = onset_delay(USO_file_path)
+    USO_features[USO_file_path.name]["rolloff"] = get_spectral_feature(USO_file_path, "rolloff", duration=1.0)
 
 for vocoded_file_path in vocoded_file_paths:
     features[vocoded_file_path.name] = {

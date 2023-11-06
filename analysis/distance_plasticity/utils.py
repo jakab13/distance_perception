@@ -3,20 +3,16 @@ import slab
 import pathlib
 import os
 from datetime import datetime
+import numpy as np
 
 pd.options.mode.chained_assignment = None
-_phase_to_text_converter = {
-    0: "pre",
-    1: "post-1",
-    2: "post-2",
-    3: "post-3"
-}
 
 
 def load_df():
+    slider_vals = get_slider_vals()
     results_folder = pathlib.Path(os.getcwd()) / "analysis" / "distance_plasticity" / "results"
 
-    subjects_excl = ["sub_01", "sub_02", "sub_03", "sub_04", "sub_05", "varvara"]
+    subjects_excl = ["sub_01", "sub_02", "sub_03", "sub_04", "sub_05", "varvara", "sub_25"]
 
     subjects = [s for s in os.listdir(results_folder) if not s.startswith('.')]
     subjects = sorted([s for s in subjects if not any(s in excl for excl in subjects_excl)])
@@ -24,7 +20,8 @@ def load_df():
     results_files = {s: [f for f in sorted(os.listdir(results_folder / s)) if not f.startswith('.')] for s in subjects}
 
     visual_mapping_columns = ["subject_ID", "visual_obj_dist", "slider_val", "slider_ratio", "slider_dist", "response_time"]
-    distance_discrimination_columns = ["subject_ID", "block", "spk_dist", "channel", "slider_val", "slider_ratio", "slider_dist", "response_time", "USO_file_name"]
+    distance_discrimination_columns = ["subject_ID", "block", "spk_dist", "channel", "slider_val", "slider_ratio",
+                                       "slider_dist", "slider_dist_updated", "slider_update_diff", "response_time", "USO_file_name"]
     reverb_pse_columns = ["subject_ID", "block", "start_reverse_t60", "end_reverse_t60", "n_loop", "n_ref_played"]
 
     df_visual_mapping = pd.DataFrame(columns=visual_mapping_columns)
@@ -66,8 +63,21 @@ def load_df():
                 df_curr["USO_file_name"] = slab.ResultsFile.read_file(path, tag="USO_file_name")
                 df_curr["slider_min"] = slab.ResultsFile.read_file(path, tag="slider_min_max")[0]
                 df_curr["slider_max"] = slab.ResultsFile.read_file(path, tag="slider_min_max")[1]
-                # df_curr["date_time"] = date_time
-                # df_curr["timestamp"] = pd.to_datetime(df_curr["date_time"].astype(int)) + df_curr["response_time"]
+                df_curr["date_time_session"] = int(date_time.timestamp())
+                prev_subject = subjects[subjects.index(subject) - 1]
+                slider_vals_scaled = np.interp(slider_vals, [slider_vals.min(), slider_vals.max()], [df_curr["slider_max"][0], df_curr["slider_min"][0]])
+                slider_vals_interpolated = 0.5 - (np.interp(df_curr["slider_val"], slider_vals_scaled[::-1], np.linspace(0, 1, len(slider_vals_scaled))) - 0.5)
+                slider_ratios = np.interp(slider_vals_interpolated, [0, 1], [slider_vals_scaled.min(), slider_vals_scaled.max()])
+                df_curr["slider_dist_updated"] = np.interp(slider_ratios, [slider_ratios.min(), slider_ratios.max()], [2, 12])
+                df_curr["slider_update_diff"] = df_curr["slider_dist_updated"] - df_curr["slider_dist"]
+
+                if prev_subject is not subjects[-1]:
+                    df_prev_subject = df_distance_discrimination[df_distance_discrimination["subject_ID"] == prev_subject]
+                    df_curr["date_time_trial"] = df_curr["date_time_session"].iloc[-1] + \
+                                               np.cumsum(df_curr.response_time + 0.3) - \
+                                               df_prev_subject["date_time_session"].iloc[-1]
+                else:
+                    df_curr["date_time_trial"] = np.cumsum(df_curr.response_time + 0.3)
                 df_distance_discrimination = pd.concat([df_distance_discrimination, df_curr], ignore_index=True)
                 distance_discrimination_block_counter += 1
             if stage == "reverb_pse":
@@ -110,10 +120,22 @@ def load_df():
 
 
 def phase_to_text(phase):
+    _phase_to_text_converter = {
+        0: "Pre",
+        1: "Post-1",
+        2: "Post-2",
+        3: "Post-3"
+    }
     return _phase_to_text_converter[phase]
 
 
 def _get_date_time(path):
-    date_time_string = path.stem[7:]
+    date_time_string = path.stem[-19:]
     date_time = datetime.strptime(date_time_string, '%Y-%m-%d-%H-%M-%S')
     return date_time
+
+
+def get_slider_vals():
+    return np.asarray([0.45222131, 0.44131698, 0.41785769, 0.39619655, 0.3763091, 0.35606989, 0.33759436, 0.32078086,
+                       0.30560168, 0.28881041, 0.27388494, 0.25891409, 0.24517183, 0.2309344, 0.21670969, 0.20305002,
+                       0.18915616, 0.17521964, 0.16089688, 0.14588654, 0.13436408])

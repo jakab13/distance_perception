@@ -61,7 +61,7 @@ plt.ylabel("Absolute Error (m)")
 plt.xticks([0, 1, 2, 3], ["Pre", "Post-1", "Post-2", "Post-3"])
 plt.title("Mean absolute error before/after training sessions")
 
-for subject_idx, subject in enumerate(sorted(subjects)):
+for subject_idx, subject in enumerate(sorted(subjects[-2:])):
     df_sub = df_distance_discrimination[df_distance_discrimination.subject_ID == subject]
     # df_sub = df_distance_discrimination
     # subject = "all subjects"
@@ -89,9 +89,11 @@ for subject_idx, subject in enumerate(sorted(subjects)):
     title = "Presented vs Perceived throughout training (" + subject + ")"
     # plt.tight_layout()
     fig.suptitle(title)
-    # plt.savefig(folder_path / "figures" / title, dpi=200, overwrite=True)
+    # plt.savefig(folder_path / "figures" / title, dpi=400, overwrite=True)
     # plt.close()
     plt.show()
+
+sns.scatterplot(data=df_distance_discrimination, x="subject_ID", y="slider_max")
 
 
 for subject_idx, subject in enumerate(sorted(subjects)):
@@ -120,7 +122,7 @@ for subject_idx, subject in enumerate(sorted(subjects)):
             case 3:
                 axis_title = "Post-3"
         ax[block].set_xticks([0, 5, 10])
-        ax[block].set_xticklabels([2, 7.5, 12])
+        ax[block].set_xticklabels([2, 7, 12])
         ax[block].set_title(axis_title + " " + "MSE=" + str(round(mse, 2)))
         ax[block].set_xlabel("Speaker distance (m)")
         ax[block].set_ylabel("Signed error (m)")
