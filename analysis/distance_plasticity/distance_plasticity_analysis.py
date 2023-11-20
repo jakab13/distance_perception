@@ -61,7 +61,7 @@ plt.ylabel("Absolute Error (m)")
 plt.xticks([0, 1, 2, 3], ["Pre", "Post-1", "Post-2", "Post-3"])
 plt.title("Mean absolute error before/after training sessions")
 
-for subject_idx, subject in enumerate(sorted(subjects[-2:])):
+for subject_idx, subject in enumerate(sorted(subjects[-4:-3])):
     df_sub = df_distance_discrimination[df_distance_discrimination.subject_ID == subject]
     # df_sub = df_distance_discrimination
     # subject = "all subjects"
