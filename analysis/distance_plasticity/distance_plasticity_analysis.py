@@ -2,6 +2,7 @@ import os
 import pathlib
 import seaborn as sns
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
 import numpy as np
@@ -15,6 +16,8 @@ df_distance_discrimination, df_visual_mapping = load_df()
 
 subjects = df_distance_discrimination.subject_ID.unique()
 spk_dists = sorted(df_distance_discrimination.spk_dist.unique())
+
+palette_tab10 = sns.color_palette(palette="tab10")
 
 visual_mapping_plot = sns.regplot(data=df_visual_mapping, x="visual_obj_dist", y="slider_dist")
 visual_mapping_plot.set(title="Visual mapping")
@@ -41,11 +44,23 @@ for subject_idx, subject in enumerate(sorted(subjects)):
 
 # Distribution of signed error at different distances and blocks
 fig, ax = plt.subplots(nrows=11, ncols=1, sharex=True)
-for spk_idx, spk_dist in enumerate(sorted(df_distance_discrimination["spk_dist"].unique())):
+for spk_idx, spk_dist in enumerate(spk_dists):
     df = df_distance_discrimination[df_distance_discrimination["spk_dist"] == spk_dist]
-    sns.kdeplot(data=df, x="signed_err", hue="block", ax=ax[spk_idx], common_norm=False, fill=True, palette="crest", alpha=.5, linewidth=0)
+    sns.kdeplot(data=df, x="signed_err", hue="phase", ax=ax[spk_idx], common_norm=False, fill=True, palette="tab10")
     ax[spk_idx].get_legend().remove()
     ax[spk_idx].set_title(str(spk_dist))
+
+sns.boxplot(df_distance_discrimination, x="spk_dist", y="signed_err", hue="phase", width=0.5)\
+    .set(title="Aggregated error at different phases",
+         xlabel="Presented distance (m)",
+         ylabel="Error (m)")
+
+sns.displot(data=df_distance_discrimination, x="signed_err", hue="phase", kind="kde", row="spk_dist", palette="tab10",
+            height=1, common_norm=False, aspect=5)
+
+avg_error_per_subject = df_distance_discrimination.groupby(["spk_dist", 'subject_ID', 'phase'])["signed_err"].agg(['mean', 'var', 'std']).reset_index()
+
+sns.catplot(data=avg_error_per_subject, x="spk_dist", y="std", hue="phase", kind="bar", col="subject_ID", col_wrap=4)
 
 # Absolute error at different blocks
 sns.pointplot(data=df_distance_discrimination, x="block", y="absolute_err", errorbar="se")
@@ -61,7 +76,7 @@ plt.ylabel("Absolute Error (m)")
 plt.xticks([0, 1, 2, 3], ["Pre", "Post-1", "Post-2", "Post-3"])
 plt.title("Mean absolute error before/after training sessions")
 
-for subject_idx, subject in enumerate(sorted(subjects[-4:-3])):
+for subject_idx, subject in enumerate(sorted(subjects[-5:])):
     df_sub = df_distance_discrimination[df_distance_discrimination.subject_ID == subject]
     # df_sub = df_distance_discrimination
     # subject = "all subjects"
@@ -171,3 +186,96 @@ for subject in subjects:
 md = smf.mixedlm("signed_err ~ C(block)", df_distance_discrimination, groups="subject_ID")
 mdf = md.fit()
 print(mdf.summary())
+
+import pandas as pd
+import statsmodels.api as sm
+from statsmodels.formula.api import ols
+from scipy import stats
+
+# Load the CSV file
+data = pd.read_csv('/Users/jakabpilaszanovich/Documents/GitHub/distance_perception/distance_plasticity.csv')
+
+# Exclude subjects 31 and 32
+data = data[~data['subject_ID'].isin(['sub_31', 'sub_32'])]
+
+# List to store individual betas
+individual_betas_list = []
+
+# Iterate over each subject and phase to calculate individual betas
+for subject in data['subject_ID'].unique():
+    for phase in data['phase'].unique():
+        subject_phase_data = data[(data['subject_ID'] == subject) & (data['phase'] == phase)]
+        if not subject_phase_data.empty:
+            slope, intercept, r_value, p_value, std_err = stats.linregress(subject_phase_data['spk_dist'], subject_phase_data['slider_dist'])
+            individual_betas_list.append({'subject_ID': subject, 'phase': phase, 'slope': slope})
+
+# Convert list to DataFrame
+individual_betas = pd.DataFrame(individual_betas_list)
+
+# Convert 'phase' to an integer or categorical type
+individual_betas['phase'] = individual_betas['phase'].astype(int)
+# Alternatively, convert to a categorical type
+# individual_betas['phase'] = individual_betas['phase'].astype('category')
+
+# Convert 'phase' and 'subject_ID' to categorical types
+individual_betas['phase'] = individual_betas['phase'].astype('category')
+individual_betas['subject_ID'] = individual_betas['subject_ID'].astype('category')
+
+# Fit the model for two-way ANOVA
+model = ols('slope ~ C(subject_ID) + C(phase)', data=individual_betas).fit()
+
+
+anova_results = sm.stats.anova_lm(model, typ=2)
+print(anova_results)
+
+fig, ax = plt.subplots(nrows=len(spk_dists), ncols=1, sharex=True, figsize=(15, 25))
+for spk_idx, spk_dist in enumerate(spk_dists):
+    df = df_distance_discrimination[df_distance_discrimination.spk_dist == spk_dist]
+    ax_curr = ax[spk_idx]
+    ax_curr.set_title(f"Presented distance: {spk_dist}m")
+    ax_curr.set_xlabel("Signed error (m)")
+    ax_curr.set_xlim(-6, 6)
+    sns.histplot(df,
+                x="signed_err",
+                hue="phase",
+                common_norm=False,
+                palette="tab10",
+                bins=20,
+                multiple="dodge",
+                shrink=.6,
+                stat="density",
+                ax=ax_curr,
+                 alpha=.2,
+                 lw=0
+                )
+    sns.kdeplot(df,
+                x="signed_err",
+                hue="phase",
+                palette="tab10",
+                common_norm=False,
+                ax=ax_curr,
+                alpha=0
+                )
+    y_max = np.max([l.get_ydata() for l in ax_curr.lines])
+    patches = []
+    for phasex_idx, phase in enumerate(df.phase.unique()):
+        df_phase = df[df.phase == phase]
+        mean = df_phase["signed_err"].mean()
+        median = np.median(df_phase["signed_err"])
+        stdev = df_phase["signed_err"].std()
+        color = palette_tab10[phasex_idx]
+        left = mean - stdev
+        right = mean + stdev
+        x_pdf = np.linspace(df_phase["signed_err"].min(), df_phase["signed_err"].max(), 100)
+        y_pdf = scipy.stats.norm.pdf(x_pdf, mean, stdev)
+        ax_curr.vlines(mean, 0, y_pdf.max(), color=color)
+        ax_curr.vlines(median, 0, y_pdf.max(), color=color, ls=":")
+        ax_curr.plot(x_pdf, y_pdf, color=color)
+        line_patch = mpatches.Patch(color=color, label=f"phase {int(phase)}")
+        patches.append(line_patch)
+        # ax_curr.fill_between(x_pdf, 0, y_pdf, where=(left < x_pdf) & (x_pdf <= right), interpolate=True, facecolor=color, alpha=0.1)
+    ax_curr.legend(handles=patches)
+main_title = "Signed error distributions at different phases"
+fig.tight_layout()
+plt.savefig(main_title, dpi=400, overwrite=True)
+plt.show()

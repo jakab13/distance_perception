@@ -12,13 +12,13 @@ def load_df():
     slider_template = get_slider_template()
     results_folder = pathlib.Path(os.getcwd()) / "analysis" / "distance_plasticity" / "results"
 
-    subjects_excl = ["sub_01", "sub_02", "sub_03", "sub_04", "sub_05", "varvara", "sub_25"]
+    subjects_excl = ["sub_01", "sub_02", "sub_03", "sub_04", "sub_05", "varvara", "sub_25", 'sub_31', 'sub_32']
 
-    subjects_excl_2 = ["sub_06", "sub_07", "sub_08", "sub_09", "sub_10", "sub_11", "sub_12", "sub_13", "sub_14", "sub_15", "sub_16", "sub_17"]
+    subjects_excl_2 = ["sub_long_sess_1", "sub_long_sess_2", "sub_long_sess_3", "sub_long_sess_4", "sub_long_sess_5"]
 
     subjects = [s for s in os.listdir(results_folder) if not s.startswith('.')]
     subjects = sorted([s for s in subjects if not any(s in excl for excl in subjects_excl)])
-    # subjects = sorted([s for s in subjects if not any(s in excl for excl in subjects_excl_2)])
+    subjects = sorted([s for s in subjects if not any(s in excl for excl in subjects_excl_2)])
 
     results_files = {s: [f for f in sorted(os.listdir(results_folder / s)) if not f.startswith('.')] for s in subjects}
 
@@ -119,6 +119,10 @@ def load_df():
     df_distance_discrimination["signed_err"] = (df_distance_discrimination["slider_dist"] - df_distance_discrimination["spk_dist"]).astype('float64')
     df_distance_discrimination["absolute_err"] = df_distance_discrimination["signed_err"].abs()
     df_distance_discrimination["signed_err_2"] = df_distance_discrimination["signed_err"]**2
+
+    # Filtering for signed error that should be within half the distance of the range
+    df_distance_discrimination = df_distance_discrimination[
+        df_distance_discrimination["signed_err"].between(-5, 5)]
 
     # Calculating and storing errors (visual mapping)
     df_visual_mapping["signed_err"] = (df_visual_mapping["slider_dist"] - df_visual_mapping["visual_obj_dist"]).astype('float64')
