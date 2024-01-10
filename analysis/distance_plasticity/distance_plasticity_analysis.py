@@ -7,6 +7,7 @@ import statsmodels.api as sm
 import statsmodels.formula.api as smf
 import numpy as np
 import scipy
+import random
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from analysis.distance_plasticity.utils import load_df, phase_to_text
 
@@ -279,3 +280,50 @@ main_title = "Signed error distributions at different phases"
 fig.tight_layout()
 plt.savefig(main_title, dpi=400, overwrite=True)
 plt.show()
+
+
+for spk_idx, spk_dist in enumerate(spk_dists):
+    df = df_distance_discrimination[
+        (df_distance_discrimination.spk_dist == spk_dist)
+        # (df_distance_discrimination.phase != 0.0)
+    ]
+    g = sns.FacetGrid(df, row="phase", hue="phase", palette=palette_tab10, sharex=True, sharey=True, height=2, aspect=5, xlim=(-6, 6))
+    g.map(sns.histplot, "signed_err", bins=50, kde=True)
+    title = f"Signed error at different phases (presented distance at {spk_dist}m)"
+    plt.suptitle(title)
+    plt.tight_layout()
+    plt.savefig(title + ".png", format="png", dpi=400, overwrite=True)
+    plt.show()
+
+spk_dist = 2.1
+phase = 1.0
+df = df_distance_discrimination[
+        (df_distance_discrimination.spk_dist == spk_dist) &
+        (df_distance_discrimination.phase == phase)
+    ]
+phase_1 = df["signed_err"]
+
+
+def bs(data, plotting=False):
+    bs_n = 10000
+    bs_array = np.zeros(bs_n)
+    for i in range(bs_n):
+        y = np.random.choice(data, size=len(data), replace=True)
+        bs_array[i] = np.median(y)
+    bs_mean = np.mean(bs_array)
+    bs_se = np.std(bs_array)
+    bs_95conf = scipy.stats.t.interval(alpha=0.95, df=len(bs_array)-1,
+                  loc=np.mean(bs_array),
+                  scale=scipy.stats.sem(bs_array))
+    if plotting:
+        plt.hist(bs_array, bins=50)
+        plt.axvline(bs_95conf[0], color="r", ls=":")
+        plt.axvline(bs_95conf[1], color="r", ls=":")
+    return bs_mean, bs_se, bs_95conf
+
+phase_3 = df_distance_discrimination[
+        (df_distance_discrimination.spk_dist == spk_dist) &
+        (df_distance_discrimination.phase == 3.0)
+    ]["signed_err"]
+
+phase_3_median = np.median(phase_3)
