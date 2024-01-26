@@ -6,8 +6,9 @@
       <excludeFolder url="file://$MODULE_DIR$/experiment/samples" />
       <excludeFolder url="file://$MODULE_DIR$/experiment/data" />
       <excludeFolder url="file://$MODULE_DIR$/experiment/responses" />
+      <excludeFolder url="file://$MODULE_DIR$/venv" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.10" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.8 (distance_perception)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>

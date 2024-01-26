@@ -121,8 +121,8 @@ def load_df():
     df_distance_discrimination["signed_err_2"] = df_distance_discrimination["signed_err"]**2
 
     # Filtering for signed error that should be within half the distance of the range
-    df_distance_discrimination = df_distance_discrimination[
-        df_distance_discrimination["signed_err"].between(-5, 5)]
+    # df_distance_discrimination = df_distance_discrimination[
+    #     df_distance_discrimination["signed_err"].between(-5, 5)]
 
     # Calculating and storing errors (visual mapping)
     df_visual_mapping["signed_err"] = (df_visual_mapping["slider_dist"] - df_visual_mapping["visual_obj_dist"]).astype('float64')
@@ -154,3 +154,45 @@ def get_slider_template():
                                   0.21670969, 0.20305002, 0.18915616, 0.17521964, 0.16089688, 0.14588654, 0.13436408])
     slider_template_norm = np.interp(slider_template, [slider_template.min(), slider_template.max()], [0, 1])
     return slider_template_norm
+
+
+def bs(data, type="median"):
+    bs_n = 10000
+    bs_array = np.zeros(bs_n)
+    for i in range(len(bs_array)):
+        y = np.random.choice(data, size=len(data), replace=True)
+        if type == "median":
+            bs_array[i] = np.median(y)
+        if type == "mean":
+            bs_array[i] = np.mean(y)
+    return bs_array
+
+
+def bs_diff(a1, a2, type="median"):
+    bs_n = 10000
+    bs_array = np.zeros(bs_n)
+    for i in range(len(bs_array)):
+        y1 = np.random.choice(a1, size=len(a1), replace=True)
+        y2 = np.random.choice(a2, size=len(a2), replace=True)
+        if type == "median":
+            bs_array[i] = np.median(y1) - np.median(y2)
+        if type == "mean":
+            bs_array[i] = np.mean(y1) - np.mean(y2)
+    return bs_array
+
+def ci_data(bs_array, percentile=95):
+    bs_mean = np.mean(bs_array)
+    bs_median = np.percentile(bs_array, 50)
+    alpha = 100 - percentile
+    bs_lower_ci = np.percentile(bs_array, alpha / 2)
+    bs_upper_ci = np.percentile(bs_array, 100 - alpha / 2)
+    bs_se = np.std(bs_array)
+    return bs_mean, bs_median, bs_se, bs_lower_ci, bs_upper_ci
+
+
+def expected_value(data):
+    weights, values = np.histogram(data, density=True)
+    values = np.asarray(values[:-1])
+    weights = np.asarray(weights)
+    return (values * weights).sum() / weights.sum()
+

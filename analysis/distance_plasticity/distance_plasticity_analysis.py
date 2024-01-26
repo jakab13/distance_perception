@@ -1,3 +1,4 @@
+import copy
 import os
 import pathlib
 import seaborn as sns
@@ -8,8 +9,9 @@ import statsmodels.formula.api as smf
 import numpy as np
 import scipy
 import random
+import pandas as pd
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-from analysis.distance_plasticity.utils import load_df, phase_to_text
+from analysis.distance_plasticity.utils import load_df, phase_to_text, bs, bs_diff, ci_data, expected_value
 
 folder_path = pathlib.Path(os.getcwd()) / "analysis" / "distance_plasticity"
 
@@ -128,15 +130,14 @@ for subject_idx, subject in enumerate(sorted(subjects)):
         std_line_bottom = (signed_err_mean - signed_err_std) * np.ones(11)
         ax[block].fill_between(np.arange(11), std_line_top, std_line_bottom, color="orange", alpha=0.1)
         sns.pointplot(data=df, x="spk_dist", y="signed_err", ax=ax[block], errorbar="se")
-        match block:
-            case 0:
-                axis_title = "Pre"
-            case 1:
-                axis_title = "Post-1"
-            case 2:
-                axis_title = "Post-2"
-            case 3:
-                axis_title = "Post-3"
+        if block == 0:
+            axis_title = "Pre"
+        if block == 0:
+            axis_title = "Post-1"
+        if block == 0:
+            axis_title = "Post-2"
+        if block == 0:
+            axis_title = "Post-3"
         ax[block].set_xticks([0, 5, 10])
         ax[block].set_xticklabels([2, 7, 12])
         ax[block].set_title(axis_title + " " + "MSE=" + str(round(mse, 2)))
@@ -295,35 +296,72 @@ for spk_idx, spk_dist in enumerate(spk_dists):
     plt.savefig(title + ".png", format="png", dpi=400, overwrite=True)
     plt.show()
 
-spk_dist = 2.1
-phase = 1.0
-df = df_distance_discrimination[
-        (df_distance_discrimination.spk_dist == spk_dist) &
-        (df_distance_discrimination.phase == phase)
-    ]
-phase_1 = df["signed_err"]
+
+fig, ax = plt.subplots(nrows=len(spk_dists), ncols=1, sharex=True, figsize=(15, 25))
+for spk_idx, spk_dist in enumerate(spk_dists):
+    ax_curr = ax[spk_idx]
+    for phase_idx in [1, 2, 3]:
+        phase_data = df_distance_discrimination[
+            (df_distance_discrimination.spk_dist == spk_dist) &
+            (df_distance_discrimination.phase == phase_idx)
+        ]["signed_err"]
+        bs_array = bs(phase_data)
+        bs_mean, bs_median, bs_se, bs_lower_ci, bs_upper_ci = ci_data(bs_array)
+        distribution_line = sns.kdeplot(bs_array, color=palette_tab10[phase_idx], ax=ax_curr)
+        ax_curr.axvline(bs_mean, color=palette_tab10[phase_idx], label=f"Phase {phase_idx}")
+        # ax_curr.axvline(bs_lower_ci, ymax= linestyle="--", color=palette_tab10[phase_idx])
+        # ax_curr.axvline(bs_upper_ci, ymax= linestyle="--", color=palette_tab10[phase_idx])
+    ax_curr.set_title(f"{spk_dist}m")
+    ax_curr.legend(loc='center left', bbox_to_anchor=(1.02, 0.5))
+title = "Bootstrap distribution of median signed error values in the different phases"
+plt.suptitle(title, y=1)
+plt.tight_layout()
+# plt.savefig(title + ".png", format="png", dpi=400, overwrite=True)
+plt.show()
 
 
-def bs(data, plotting=False):
-    bs_n = 10000
-    bs_array = np.zeros(bs_n)
-    for i in range(bs_n):
-        y = np.random.choice(data, size=len(data), replace=True)
-        bs_array[i] = np.median(y)
-    bs_mean = np.mean(bs_array)
-    bs_se = np.std(bs_array)
-    bs_95conf = scipy.stats.t.interval(alpha=0.95, df=len(bs_array)-1,
-                  loc=np.mean(bs_array),
-                  scale=scipy.stats.sem(bs_array))
-    if plotting:
-        plt.hist(bs_array, bins=50)
-        plt.axvline(bs_95conf[0], color="r", ls=":")
-        plt.axvline(bs_95conf[1], color="r", ls=":")
-    return bs_mean, bs_se, bs_95conf
+df_bs = pd.DataFrame(columns=["subject_ID", "phase", "spk_dist", "slider_dist_bs_mean", "slider_dist_median", "slider_dist_expected_val"])
+for subject in subjects:
+    df_sub = df_distance_discrimination[df_distance_discrimination.subject_ID == subject]
+    print(f"Starting with subject: {subject}")
+    for spk_dist in spk_dists:
+        df_dist = df_sub[df_sub.spk_dist == spk_dist]
+        # df_phase_0 = df_dist[df_dist.phase == 0]["slider_dist"]
+        df_phase_1 = df_dist[df_dist.phase == 1.0]["slider_dist"]
+        for phase in [1.0, 2.0, 3.0]:
+            df_phase_curr = df_dist[df_dist.phase == phase]["slider_dist"]
+            # bs_slider_dist_dist = bs_diff(df_phase_curr, df_phase_1)
+            # bs_slider_dist_mean = bs_slider_dist_dist.mean()
+            bs_slider_dist_mean = None
+            slider_median = df_phase_curr.median() - df_phase_1.median()
+            slider_expected_val = expected_value(df_phase_curr) - expected_value(df_phase_1)
+            df_bs.loc[-1] = [subject, phase, spk_dist, bs_slider_dist_mean, slider_median, slider_expected_val]
+            df_bs.index += 1
+        print(f"Done with distance: {spk_dist}")
+df_bs = df_bs.sort_index()
 
-phase_3 = df_distance_discrimination[
-        (df_distance_discrimination.spk_dist == spk_dist) &
-        (df_distance_discrimination.phase == 3.0)
-    ]["signed_err"]
+df_linreg = pd.DataFrame(columns=["subject_ID", "phase", "beta_bs", "beta_median"])
+for subject in subjects:
+    df_bs_sub = df_bs[df_bs.subject_ID == subject]
+    for phase in [1, 2, 3]:
+        df_bs_curr_phase = df_bs_sub[df_bs_sub.phase == phase]
+        linreg_bs = scipy.stats.linregress(df_bs_curr_phase["spk_dist"], df_bs_curr_phase["slider_dist_bs_mean"])
+        linreg_median = scipy.stats.linregress(df_bs_curr_phase["spk_dist"], df_bs_curr_phase["slider_dist_median"])
+        beta_bs = linreg_bs.slope
+        beta_median = linreg_median.slope
+        df_linreg.loc[-1] = [subject, phase, beta_bs, beta_median]
+        df_linreg.index += 1
+df_linreg = df_linreg.sort_index()
 
-phase_3_median = np.median(phase_3)
+sns.lmplot(df_bs, x="spk_dist", y="slider_dist_median", hue="phase", scatter=False)
+plt.savefig("Slopes normalised to phase 1", dpi=400)
+
+linreg_bs_distance_compression = scipy.stats.linregress(df_linreg["phase"].astype(float), df_linreg["beta_bs"])
+linreg_median_distance_compression = scipy.stats.linregress(df_linreg["phase"].astype(float), df_linreg["beta_median"])
+
+ax = sns.barplot(df_linreg, x="phase", y="beta_median")
+ax.set_title("Slope values normalised to phase 1")
+ax.text(0.05, 0.95, '\n'.join(("Linreg p-value:", f"{round(linreg_median_distance_compression.pvalue, 5)}")), transform=ax.transAxes, verticalalignment='top')
+plt.savefig(folder_path / "figures" / "Slope values normalised to phase 1", dpi=400)
+
+# Getting rid of outliers
