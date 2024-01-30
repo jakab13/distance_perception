@@ -81,7 +81,7 @@ def measure_rt60(h, fs=44100, decay_db=60, plot=False, rt60_tgt=None):
 
         # time vector
         def get_time(x, fs):
-            return np.arange(x.shape[0]) / fs - i_5db / fs
+            return np.arange(x.shape[0]) / fs
 
         T = get_time(power_db, fs)
 
@@ -89,13 +89,17 @@ def measure_rt60(h, fs=44100, decay_db=60, plot=False, rt60_tgt=None):
         plt.plot(get_time(energy_db, fs), energy_db, label="Energy")
 
         # now the linear fit
-        # plt.plot([0, est_rt60], [e_5db, -65], "--", label="Linear Fit")
-        # plt.plot(T, np.ones_like(T) * -60, "--", label="-60 dB")
+        # plt.plot([0, est_rt60], [0, -60], "--", label="Linear Fit (RT20)")
+        plt.plot(T, np.ones_like(T) * -decay_db, "--", label=f"-{decay_db} dB")
         # plt.vlines(
         #     est_rt60, energy_db_min, 0, linestyles="dashed", label="Estimated RT60"
         # )
-        if rt60_tgt is not None:
-            plt.vlines(rt60_tgt, energy_db_min, 0, label="Target RT60")
+        # if rt60_tgt is not None:
+        #     plt.vlines(rt60_tgt, energy_db_min, 0, label="Target RT60")
+        plt.xlim(-0.5, max(T) + 0.5)
+        plt.xlabel("Time (s)")
+        plt.ylabel("Sound energy (dB)")
+        plt.title("Estimated RT20")
         plt.legend()
         plt.show()
     return est_rt60
