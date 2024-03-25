@@ -79,17 +79,20 @@ plt.ylabel("Absolute Error (m)")
 plt.xticks([0, 1, 2, 3], ["Pre", "Post-1", "Post-2", "Post-3"])
 plt.title("Mean absolute error before/after training sessions")
 
-for subject_idx, subject in enumerate(sorted(subjects[-5:])):
+for subject_idx, subject in enumerate(sorted(subjects[14:15])):
     df_sub = df_distance_discrimination[df_distance_discrimination.subject_ID == subject]
     # df_sub = df_distance_discrimination
-    # subject = "all subjects"
+    # subject = f"N={len(df_distance_discrimination.subject_ID.unique())}"
     fig, ax = plt.subplots(nrows=1, ncols=len(df_sub.phase.unique()), sharex=True, sharey=True, figsize=(20, 4))
     for phase in range(len(df_distance_discrimination.phase.unique())):
         df = df_sub[df_distance_discrimination.phase == phase]
         min = df_distance_discrimination.spk_dist.min()
         max = df_distance_discrimination.spk_dist.max()
         linreg = scipy.stats.linregress(df.spk_dist.dropna(), df.slider_dist.dropna())
-        sns.regplot(data=df, x="spk_dist", y="slider_dist", ax=ax[phase], scatter_kws={"alpha": 0.15})
+        sns.regplot(data=df, x="spk_dist", y="slider_dist", ax=ax[phase], scatter=False, scatter_kws={"alpha": 0.01}, ci=95)
+        # sns.regplot(data=df.groupby(by=["subject_ID", "spk_dist"], as_index=False)["slider_dist"].mean(),
+        #             x="spk_dist", y="slider_dist", ax=ax[phase], scatter=False, scatter_kws={"alpha": 0.01})
+        # sns.lineplot(data=df, x="spk_dist", y="slider_dist", ax=ax[phase], errorbar=("ci", 95))
         ax[phase].plot(
             np.arange(min, max + 1),
             np.arange(min, max + 1),
@@ -107,7 +110,8 @@ for subject_idx, subject in enumerate(sorted(subjects[-5:])):
     title = "Presented vs Perceived throughout training (" + subject + ")"
     # plt.tight_layout()
     fig.suptitle(title)
-    # plt.savefig(folder_path / "figures" / title, dpi=400, overwrite=True)
+    plt.savefig(folder_path / "figures" / title, dpi=400)
+    plt.savefig(folder_path / "figures" / str(title + ".eps"), format="eps")
     # plt.close()
     plt.show()
 
@@ -353,7 +357,10 @@ for subject in subjects:
         df_linreg.index += 1
 df_linreg = df_linreg.sort_index()
 
-sns.lmplot(df_bs, x="spk_dist", y="slider_dist_median", hue="phase", scatter=False)
+ax = sns.lmplot(df_bs, x="spk_dist", y="slider_dist_median", hue="phase", scatter=False)
+ax.set(xlabel="Presented (m)", ylabel="Normalised Perceived (m)")
+plt.title("Linear regressions of median perceived \n distances normalised to phase 1")
+plt.tight_layout()
 plt.savefig("Slopes normalised to phase 1", dpi=400)
 
 linreg_bs_distance_compression = scipy.stats.linregress(df_linreg["phase"].astype(float), df_linreg["beta_bs"])
@@ -361,7 +368,22 @@ linreg_median_distance_compression = scipy.stats.linregress(df_linreg["phase"].a
 
 ax = sns.barplot(df_linreg, x="phase", y="beta_median")
 ax.set_title("Slope values normalised to phase 1")
+ax.set(xlabel="Phase", ylabel="Normalised Slope")
 ax.text(0.05, 0.95, '\n'.join(("Linreg p-value:", f"{round(linreg_median_distance_compression.pvalue, 5)}")), transform=ax.transAxes, verticalalignment='top')
 plt.savefig(folder_path / "figures" / "Slope values normalised to phase 1", dpi=400)
 
-# Getting rid of outliers
+# Long session analysis
+df_long_sess = df_distance_discrimination[df_distance_discrimination.subject_ID.isin(["sub_long_sess_1", "sub_long_sess_2", "sub_long_sess_3", "sub_long_sess_4", "sub_long_sess_5"])]
+sns.boxplot(df_long_sess, x="subject_ID", y="absolute_err", hue="phase")
+
+df_long_sess_performance = pd.DataFrame(columns=["subject_ID", "phase", "beta", "stderr"])
+for subject_ID in df_long_sess.subject_ID.unique():
+    for phase in df_long_sess.phase.unique()[1:]:
+        df_long_sess_phase = df_long_sess[(df_long_sess.phase == phase) & (df_long_sess.subject_ID == subject_ID)]
+        linreg = scipy.stats.linregress(df_long_sess_phase["spk_dist"].astype(float), df_long_sess_phase["slider_dist"].astype(float))
+        beta = linreg.slope
+        stderr = linreg.stderr
+        df_long_sess_performance.loc[-1] = [subject_ID, phase, beta, stderr]
+        df_long_sess_performance.index += 1
+# df_long_sess_performance = df_long_sess_performance.sort_index()
+sns.barplot(df_long_sess_performance, x="subject_ID", y="beta")

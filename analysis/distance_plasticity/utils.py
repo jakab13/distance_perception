@@ -14,18 +14,18 @@ def load_df():
 
     subjects_excl = ["sub_01", "sub_02", "sub_03", "sub_04", "sub_05", "varvara", "sub_25", 'sub_31', 'sub_32']
 
-    subjects_excl_2 = ["sub_long_sess_1", "sub_long_sess_2", "sub_long_sess_3", "sub_long_sess_4", "sub_long_sess_5"]
+    # subjects_excl_2 = ["sub_long_sess_1", "sub_long_sess_2", "sub_long_sess_3", "sub_long_sess_4", "sub_long_sess_5"]
 
     subjects = [s for s in os.listdir(results_folder) if not s.startswith('.')]
     subjects = sorted([s for s in subjects if not any(s in excl for excl in subjects_excl)])
-    subjects = sorted([s for s in subjects if not any(s in excl for excl in subjects_excl_2)])
+    # subjects = sorted([s for s in subjects if not any(s in excl for excl in subjects_excl_2)])
 
     results_files = {s: [f for f in sorted(os.listdir(results_folder / s)) if not f.startswith('.')] for s in subjects}
 
     visual_mapping_columns = ["subject_ID", "visual_obj_dist", "slider_val", "slider_ratio",
                               "slider_dist", "response_time"]
-    distance_discrimination_columns = ["subject_ID", "block", "spk_dist", "channel", "slider_val", "slider_ratio", "slider_dist", "response_time",
-                                       "USO_file_name"]
+    distance_discrimination_columns = ["subject_ID", "block", "spk_dist", "channel", "slider_val", "slider_ratio",
+                                       "slider_dist", "response_time", "USO_file_name"]
     reverb_pse_columns = ["subject_ID", "block", "start_reverse_t60", "end_reverse_t60", "n_loop", "n_ref_played"]
 
     df_visual_mapping = pd.DataFrame(columns=visual_mapping_columns)
@@ -66,12 +66,10 @@ def load_df():
                 df_curr["channel"] = slab.ResultsFile.read_file(path, tag="channel")
                 df_curr["slider_val"] = slab.ResultsFile.read_file(path, tag="slider_val")
                 df_curr["slider_ratio"] = slab.ResultsFile.read_file(path, tag="slider_ratio")
-                # df_curr["slider_dist_orig"] = slab.ResultsFile.read_file(path, tag="slider_dist")
                 # Correct slider non-linearity using the template
                 slider_ratio_updated = np.interp(df_curr["slider_ratio"], 1 - slider_template,
                                                               np.linspace(0, 1, len(slider_template)))
                 df_curr["slider_dist"] = np.interp(slider_ratio_updated, [0, 1], [2, 12])
-                # df_curr["slider_update_diff"] = df_curr["slider_dist"] - df_curr["slider_dist_orig"]
                 df_curr["slider_dist_delta"] = df_curr["slider_dist"].diff()
                 df_curr["response_time"] = slab.ResultsFile.read_file(path, tag="response_time")
                 df_curr["USO_file_name"] = slab.ResultsFile.read_file(path, tag="USO_file_name")
@@ -113,7 +111,7 @@ def load_df():
     df_distance_discrimination["spk_dist"].replace(2, 2.1, inplace=True)
 
     # Filtering for timing outliers
-    df_distance_discrimination = df_distance_discrimination[df_distance_discrimination["response_time"].between(0.3, 10)]
+    # df_distance_discrimination = df_distance_discrimination[df_distance_discrimination["response_time"].between(0.3, 10)]
 
     # Calculating and storing errors
     df_distance_discrimination["signed_err"] = (df_distance_discrimination["slider_dist"] - df_distance_discrimination["spk_dist"]).astype('float64')
@@ -128,6 +126,26 @@ def load_df():
     df_visual_mapping["signed_err"] = (df_visual_mapping["slider_dist"] - df_visual_mapping["visual_obj_dist"]).astype('float64')
     df_visual_mapping["absolute_err"] = df_visual_mapping["signed_err"].abs()
     df_visual_mapping["signed_err_2"] = df_visual_mapping["signed_err"]**2
+
+    df_distance_discrimination_phase0 = df_distance_discrimination.groupby(["subject_ID", "phase", "spk_dist"], as_index=False)["slider_dist"].mean()
+    df_distance_discrimination_phase0 = df_distance_discrimination_phase0[df_distance_discrimination_phase0.phase == 0]
+
+    for subject_ID in df_distance_discrimination.subject_ID.unique():
+        for phase in df_distance_discrimination.phase.unique():
+            for spk_dist in df_distance_discrimination.spk_dist.unique():
+                q_phase0 = (df_distance_discrimination_phase0.subject_ID == subject_ID) & (
+                            df_distance_discrimination_phase0.spk_dist == spk_dist)
+                q_all = (df_distance_discrimination.subject_ID == subject_ID) & (
+                            df_distance_discrimination.phase == phase) & (
+                                    df_distance_discrimination.spk_dist == spk_dist)
+                vals = df_distance_discrimination.loc[q_all]["slider_dist"] - \
+                       df_distance_discrimination_phase0.loc[q_phase0]["slider_dist"].values[0]
+                df_distance_discrimination.loc[q_all, "slider_dist_normed_to_phase0"] = vals.values.tolist()
+
+    df_distance_discrimination["signed_err_normed_to_phase0"] = (
+                df_distance_discrimination["slider_dist_normed_to_phase0"] - df_distance_discrimination["spk_dist"]).astype('float64')
+
+    df_distance_discrimination["absolute_err_normed_to_phase0"] = df_distance_discrimination["signed_err_normed_to_phase0"].abs()
 
     return df_distance_discrimination, df_visual_mapping
 
