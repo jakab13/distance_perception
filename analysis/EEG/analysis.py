@@ -79,7 +79,7 @@ if __name__ == "__main__":
 
         epochs = mne.read_epochs(epochs_folder / pathlib.Path(id + '-epo.fif'))
         epochs.apply_baseline(baseline=(-0.2, 0))
-        epochs.shift_time(-0.1, relative=True)
+        epochs.shift_time(-0.15, relative=True)
 
         evoked = [epochs[condition].average()
                    for condition in cfg["epochs"][f"event_id_{experiment}"].keys()]

@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-from analysis.utils import get_epochs, apply_transform
+from analysis.EEG.utils import get_epochs, apply_transform
 import argparse
 import numpy as np
 from meegkit.dss import dss0, dss1
